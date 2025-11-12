@@ -1,3 +1,9 @@
+@import "tailwindcss";
+
+@theme {
+  /* Tutaj możesz dodać własną konfigurację theme */
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
