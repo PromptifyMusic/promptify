@@ -1,4 +1,4 @@
-﻿import './styles/App.less'
+﻿import './App.css'
 
 function App() {
     return (
