@@ -15,6 +15,7 @@ interface TextareaProps {
     name?: string;
     id?: string;
     ariaLabel?: string;
+    maxLength?: number;
 }
 
 const Textarea: React.FC<TextareaProps> = ({
@@ -31,6 +32,7 @@ const Textarea: React.FC<TextareaProps> = ({
     name,
     id,
     ariaLabel,
+    maxLength,
 }) => {
     const isControlled = value !== undefined;
     const [internalValue, setInternalValue] = useState<string>(defaultValue);
@@ -71,7 +73,10 @@ const Textarea: React.FC<TextareaProps> = ({
     }, [currentValue, maxHeight, minHeight]);
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const next = e.target.value;
+        let next = e.target.value;
+        if (maxLength !== undefined && next.length > maxLength) {
+            next = next.slice(0, maxLength);
+        }
         if (!isControlled) {
             setInternalValue(next);
         }
@@ -99,6 +104,7 @@ const Textarea: React.FC<TextareaProps> = ({
             role="textbox"
             rows={rows}
             style={style}
+            maxLength={maxLength}
         />
     );
 };
