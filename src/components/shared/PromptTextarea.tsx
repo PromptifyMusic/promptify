@@ -41,7 +41,7 @@ const PromptTextarea: React.FC<PromptTextareaProps> = ({
   warnAt = 0.9,
   criticalAt = 1.0,
 }) => {
-  const isControlled = typeof value === 'string';
+  const isControlled = value !== undefined;
   const [mirrorValue, setMirrorValue] = useState<string>(defaultValue);
 
   const showCounter = typeof maxLength === 'number' && maxLength > 0;
