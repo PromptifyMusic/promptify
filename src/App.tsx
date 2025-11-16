@@ -18,7 +18,7 @@ function App() {
                 <div className="w-1/3">
                     <PromptTextarea
                         maxLength={250}
-                        placeholder="Wprowadź prompt do utwrozenia playlisty"
+                        placeholder="Wprowadź prompt do utworzenia playlisty"
                     />
                 </div>
                 <QuantityInput min={1} max={10} defaultValue={1} />
