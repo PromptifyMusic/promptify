@@ -76,7 +76,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
       <button
         onClick={handleDecrement}
         disabled={value <= min}
-        className="quantity-input__button quantity-input__button--decrement"
+        className="quantity-input__button glass glass--raised quantity-input__button--decrement"
         aria-label="Decrease quantity"
       >
         −
@@ -87,7 +87,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
         value={inputValue}
         onChange={handleInputChange}
         onBlur={handleBlur}
-        className="quantity-input__field"
+        className="quantity-input__field glass glass--inset"
         aria-label="Quantity"
         role="spinbutton"
         aria-valuemin={min}
@@ -100,7 +100,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
       <button
         onClick={handleIncrement}
         disabled={value >= max}
-        className="quantity-input__button quantity-input__button--increment"
+        className="quantity-input__button glass glass--raised quantity-input__button--increment"
         aria-label="Increase quantity"
       >
         +
