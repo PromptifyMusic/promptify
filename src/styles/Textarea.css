@@ -71,4 +71,14 @@
     user-select: none;
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
   }
+
+  .app-textarea__counter--warn {
+    color: #fde68a;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  }
+  .app-textarea__counter--critical {
+    color: #fca5a5;
+    font-weight: 700;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  }
 }

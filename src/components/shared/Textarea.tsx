@@ -16,6 +16,9 @@ interface TextareaProps {
     id?: string;
     ariaLabel?: string;
     maxLength?: number;
+    counterMode?: 'usedLimit' | 'remaining';
+    warnAt?: number;
+    criticalAt?: number;
 }
 
 const Textarea: React.FC<TextareaProps> = ({
@@ -33,6 +36,9 @@ const Textarea: React.FC<TextareaProps> = ({
     id,
     ariaLabel,
     maxLength,
+    counterMode = 'usedLimit',
+    warnAt = 0.9,
+    criticalAt = 1.0,
 }) => {
     const isControlled = value !== undefined;
     const [internalValue, setInternalValue] = useState<string>(defaultValue);
@@ -92,7 +98,19 @@ const Textarea: React.FC<TextareaProps> = ({
 
     const showCounter = typeof maxLength === 'number';
     const currentLen = (currentValue ?? '').length;
-    const counterText = showCounter ? `${currentLen}/${maxLength}` : '';
+    const ratio = showCounter && maxLength ? currentLen / maxLength : 0;
+    const counterState: 'normal' | 'warn' | 'critical' = !showCounter
+        ? 'normal'
+        : ratio >= criticalAt
+            ? 'critical'
+            : ratio >= warnAt
+                ? 'warn'
+                : 'normal';
+    const counterText = showCounter
+        ? (counterMode === 'remaining'
+            ? `${Math.max(0, (maxLength ?? 0) - currentLen)}`
+            : `${currentLen}/${maxLength}`)
+        : '';
 
     return (
         <div className="app-textarea-wrapper" style={{ width: resolvedWidth }}>
@@ -112,7 +130,12 @@ const Textarea: React.FC<TextareaProps> = ({
                 maxLength={maxLength}
             />
             {showCounter && (
-                <div className="app-textarea__counter" aria-hidden="true">
+                <div
+                    className={`app-textarea__counter ${counterState === 'warn' ? 'app-textarea__counter--warn' : ''} ${counterState === 'critical' ? 'app-textarea__counter--critical' : ''}`.trim()}
+                    aria-hidden="true"
+                    aria-live="polite"
+                    role="status"
+                >
                     {counterText}
                 </div>
             )}
