@@ -1,6 +1,6 @@
 ﻿import DarkVeil from "./components/layout/animatedBackground/DarkVeil.tsx";
 import QuantityInput from "./components/shared/QuantityInput";
-import Textarea from "./components/shared/Textarea.tsx";
+import PromptTextarea from "./components/shared/PromptTextarea.tsx";
 
 function App() {
     return (
@@ -15,8 +15,11 @@ function App() {
             </div>
 
             <div className="relative z-10 w-full h-full flex flex-col items-center justify-center gap-4">
-                <div className="w-1/2">
-                    <Textarea />
+                <div className="w-1/3">
+                    <PromptTextarea
+                        maxLength={250}
+                        placeholder="Wprowadź prompt do utwrozenia playlisty"
+                    />
                 </div>
                 <QuantityInput min={1} max={10} defaultValue={1} />
             </div>
