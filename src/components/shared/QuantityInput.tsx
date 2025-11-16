@@ -17,6 +17,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   className = '',
 }) => {
   const [value, setValue] = useState<number>(defaultValue);
+  const [inputValue, setInputValue] = useState<string>(String(defaultValue));
 
   useEffect(() => {
     let clampedValue = defaultValue;
@@ -26,52 +27,48 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
       clampedValue = max;
     }
 
+    setValue(clampedValue);
+    setInputValue(String(clampedValue));
+
     if (clampedValue !== defaultValue) {
-      setValue(clampedValue);
       onChange?.(clampedValue);
-    } else {
-      setValue(defaultValue);
     }
   }, [defaultValue, min, max, onChange]);
 
+  const commitValue = (next: number) => {
+    const clamped = Math.max(min, Math.min(max, next));
+    setValue(clamped);
+    setInputValue(String(clamped));
+    if (clamped !== value) {
+      onChange?.(clamped);
+    }
+  };
+
   const handleIncrement = () => {
-    const newValue = Math.min(value + 1, max);
-    setValue(newValue);
-    onChange?.(newValue);
+    commitValue(value + 1);
   };
 
   const handleDecrement = () => {
-    const newValue = Math.max(value - 1, min);
-    setValue(newValue);
-    onChange?.(newValue);
+    commitValue(value - 1);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
+    const raw = e.target.value;
 
-    if (inputValue === '') {
-      setValue(min);
-      onChange?.(min);
+    if (raw === '') {
+      setInputValue('');
       return;
     }
 
-    const numericValue = parseInt(inputValue, 10);
-    
-    if (!isNaN(numericValue)) {
-      const clampedValue = Math.max(min, Math.min(max, numericValue));
-      setValue(clampedValue);
-      onChange?.(clampedValue);
+    if (/^\d*$/.test(raw)) {
+      setInputValue(raw);
     }
   };
 
   const handleBlur = () => {
-    if (value < min) {
-      setValue(min);
-      onChange?.(min);
-    } else if (value > max) {
-      setValue(max);
-      onChange?.(max);
-    }
+    const parsed = parseInt(inputValue, 10);
+    const next = isNaN(parsed) ? min : parsed;
+    commitValue(next);
   };
 
   return (
@@ -87,11 +84,13 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
 
       <input
         type="text"
-        value={value}
+        value={inputValue}
         onChange={handleInputChange}
         onBlur={handleBlur}
         className="quantity-input__field"
         aria-label="Quantity input"
+        inputMode="numeric"
+        pattern="[0-9]*"
       />
 
       <button
