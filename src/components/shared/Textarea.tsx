@@ -90,9 +90,9 @@ const Textarea: React.FC<TextareaProps> = ({
         textareaStyle.minHeight = minHeight;
     }
 
-    const showCounter = true;
+    const showCounter = typeof maxLength === 'number';
     const currentLen = (currentValue ?? '').length;
-    const counterText = maxLength !== undefined ? `${currentLen}/${maxLength}` : `${currentLen}`;
+    const counterText = showCounter ? `${currentLen}/${maxLength}` : '';
 
     return (
         <div className="app-textarea-wrapper" style={{ width: resolvedWidth }}>

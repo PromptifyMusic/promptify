@@ -57,6 +57,7 @@
 
   .app-textarea--with-counter {
     padding-right: 3.75rem;
+    padding-bottom: 1.5rem;
   }
 
   .app-textarea__counter {
