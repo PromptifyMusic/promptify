@@ -74,7 +74,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
         onClick={handleDecrement}
         disabled={value <= min}
         className="quantity-input__button quantity-input__button--decrement"
-        aria-label="Zmniejsz wartość"
+        aria-label="Decrease quantity"
       >
         −
       </button>
@@ -85,14 +85,14 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
         onChange={handleInputChange}
         onBlur={handleBlur}
         className="quantity-input__field"
-        aria-label="Ilość"
+        aria-label="Quantity input"
       />
 
       <button
         onClick={handleIncrement}
         disabled={value >= max}
         className="quantity-input__button quantity-input__button--increment"
-        aria-label="Zwiększ wartość"
+        aria-label="Increase quantity"
       >
         +
       </button>
