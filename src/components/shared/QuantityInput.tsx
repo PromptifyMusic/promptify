@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
+import '../../styles/QuantityInput.css';
 
 interface QuantityInputProps {
   min?: number;
@@ -68,20 +69,11 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   };
 
   return (
-    <div className={`flex items-center gap-0 ${className}`}>
+    <div className={`quantity-input ${className}`}>
       <button
         onClick={handleDecrement}
         disabled={value <= min}
-        className="
-          w-10 h-10 
-          bg-gray-700 hover:bg-gray-600 
-          disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed
-          text-white font-bold text-xl
-          rounded-l-lg
-          transition-colors duration-200
-          flex items-center justify-center
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900
-        "
+        className="quantity-input__button quantity-input__button--decrement"
         aria-label="Zmniejsz wartość"
       >
         −
@@ -92,30 +84,14 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
         value={value}
         onChange={handleInputChange}
         onBlur={handleBlur}
-        className="
-          w-16 h-10
-          bg-gray-800 
-          text-white text-center font-semibold
-          border-y-2 border-gray-700
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:z-10
-          transition-all duration-200
-        "
+        className="quantity-input__field"
         aria-label="Ilość"
       />
 
       <button
         onClick={handleIncrement}
         disabled={value >= max}
-        className="
-          w-10 h-10
-          bg-gray-700 hover:bg-gray-600
-          disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed
-          text-white font-bold text-xl
-          rounded-r-lg
-          transition-colors duration-200
-          flex items-center justify-center
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900
-        "
+        className="quantity-input__button quantity-input__button--increment"
         aria-label="Zwiększ wartość"
       >
         +
