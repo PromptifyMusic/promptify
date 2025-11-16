@@ -1,6 +1,5 @@
 ﻿import './App.css'
-// import DarkVeil from "./components/layout/background/DarkVeil.tsx";
-import DarkVeil from "./components/DarkVeil/DarkVeil.tsx";
+import DarkVeil from "./components/layout/animatedBackground/DarkVeil.tsx";
 
 function App() {
     return (

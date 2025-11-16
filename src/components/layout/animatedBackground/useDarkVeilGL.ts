@@ -14,9 +14,13 @@ export default function useDarkVeilGL({
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!canvas) {
+            return;
+        }
         const parent = canvas.parentElement;
-        if (!parent) return;
+        if (!parent) {
+            return;
+        }
 
         const renderer = new Renderer({dpr: Math.min(window.devicePixelRatio, 2), canvas});
         const gl = renderer.gl;
