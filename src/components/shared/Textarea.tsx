@@ -1,7 +1,6 @@
 ﻿import React, { useState } from 'react';
 import '../../styles/Textarea.css';
 import { useAutoResizeTextarea } from '../../hooks/useAutoResizeTextarea';
-import TextareaCounter from './TextareaCounter';
 
 interface TextareaProps {
     value?: string;
@@ -18,9 +17,6 @@ interface TextareaProps {
     id?: string;
     ariaLabel?: string;
     maxLength?: number;
-    counterMode?: 'usedLimit' | 'remaining';
-    warnAt?: number;
-    criticalAt?: number;
 }
 
 const Textarea: React.FC<TextareaProps> = ({
@@ -38,13 +34,9 @@ const Textarea: React.FC<TextareaProps> = ({
     id,
     ariaLabel,
     maxLength,
-    counterMode = 'usedLimit',
-    warnAt = 0.9,
-    criticalAt = 1.0,
 }) => {
     const isControlled = value !== undefined;
     const [internalValue, setInternalValue] = useState<string>(defaultValue);
-
     const currentValue = isControlled ? (value as string) : internalValue;
 
     const ref = useAutoResizeTextarea({ value: currentValue ?? '', maxHeight, minHeight });
@@ -61,42 +53,25 @@ const Textarea: React.FC<TextareaProps> = ({
     };
 
     const resolvedWidth = typeof width === 'number' ? `${width}px` : width;
-
-    const textareaStyle: React.CSSProperties = {maxHeight};
-    if (minHeight !== undefined) {
-        textareaStyle.minHeight = minHeight;
-    }
-
-    const showCounter = typeof maxLength === 'number' && maxLength > 0;
-    const currentLen = (currentValue ?? '').length;
+    const style: React.CSSProperties = { maxHeight, width: resolvedWidth };
+    if (minHeight !== undefined) style.minHeight = minHeight;
 
     return (
-        <div className="app-textarea-wrapper" style={{ width: resolvedWidth }}>
-            <textarea
-                ref={ref}
-                id={id}
-                name={name}
-                className={`app-textarea glass glass--inset ${showCounter ? 'app-textarea--with-counter' : ''} ${className}`.trim()}
-                placeholder={placeholder}
-                value={currentValue}
-                onChange={handleChange}
-                disabled={disabled}
-                aria-label={ariaLabel || placeholder || 'Textarea'}
-                role="textbox"
-                rows={rows}
-                style={textareaStyle}
-                maxLength={maxLength}
-            />
-            {showCounter && (
-                <TextareaCounter
-                    currentLength={currentLen}
-                    maxLength={maxLength!}
-                    mode={counterMode}
-                    warnAt={warnAt}
-                    criticalAt={criticalAt}
-                />
-            )}
-        </div>
+        <textarea
+            ref={ref}
+            id={id}
+            name={name}
+            className={`app-textarea glass glass--inset ${className}`.trim()}
+            placeholder={placeholder}
+            value={currentValue}
+            onChange={handleChange}
+            disabled={disabled}
+            aria-label={ariaLabel || placeholder || 'Textarea'}
+            role="textbox"
+            rows={rows}
+            style={style}
+            maxLength={maxLength}
+        />
     );
 };
 
