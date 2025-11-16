@@ -19,14 +19,20 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   const [value, setValue] = useState<number>(defaultValue);
 
   useEffect(() => {
+    let clampedValue = defaultValue;
     if (defaultValue < min) {
-      setValue(min);
+      clampedValue = min;
     } else if (defaultValue > max) {
-      setValue(max);
+      clampedValue = max;
+    }
+
+    if (clampedValue !== defaultValue) {
+      setValue(clampedValue);
+      onChange?.(clampedValue);
     } else {
       setValue(defaultValue);
     }
-  }, [defaultValue, min, max]);
+  }, [defaultValue, min, max, onChange]);
 
   const handleIncrement = () => {
     const newValue = Math.min(value + 1, max);
