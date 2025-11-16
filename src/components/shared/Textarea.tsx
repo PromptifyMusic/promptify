@@ -67,7 +67,6 @@ const Textarea: React.FC<TextareaProps> = ({
             onChange={handleChange}
             disabled={disabled}
             aria-label={ariaLabel || placeholder || 'Textarea'}
-            role="textbox"
             rows={rows}
             style={style}
             maxLength={maxLength}
