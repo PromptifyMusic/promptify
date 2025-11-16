@@ -4,8 +4,8 @@ export interface TextareaCounterProps {
   currentLength: number;
   maxLength: number;
   mode?: 'usedLimit' | 'remaining';
-  warnAt?: number;      // 0..1
-  criticalAt?: number;  // 0..1
+  warnAt?: number;
+  criticalAt?: number;
   className?: string;
 }
 
@@ -31,8 +31,8 @@ const TextareaCounter: React.FC<TextareaCounterProps> = ({
   return (
     <div
       className={`app-textarea__counter ${state === 'warn' ? 'app-textarea__counter--warn' : ''} ${state === 'critical' ? 'app-textarea__counter--critical' : ''} ${className}`.trim()}
-      aria-hidden="true"
       aria-live="polite"
+      aria-atomic="true"
       role="status"
     >
       {text}
@@ -41,4 +41,3 @@ const TextareaCounter: React.FC<TextareaCounterProps> = ({
 };
 
 export default TextareaCounter;
-
