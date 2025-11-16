@@ -85,27 +85,38 @@ const Textarea: React.FC<TextareaProps> = ({
 
     const resolvedWidth = typeof width === 'number' ? `${width}px` : width;
 
-    const style: React.CSSProperties = {width: resolvedWidth, maxHeight};
+    const textareaStyle: React.CSSProperties = {maxHeight};
     if (minHeight !== undefined) {
-        style.minHeight = minHeight;
+        textareaStyle.minHeight = minHeight;
     }
 
+    const showCounter = true;
+    const currentLen = (currentValue ?? '').length;
+    const counterText = maxLength !== undefined ? `${currentLen}/${maxLength}` : `${currentLen}`;
+
     return (
-        <textarea
-            ref={ref}
-            id={id}
-            name={name}
-            className={`app-textarea glass glass--inset ${className}`.trim()}
-            placeholder={placeholder}
-            value={currentValue}
-            onChange={handleChange}
-            disabled={disabled}
-            aria-label={ariaLabel || placeholder || 'Textarea'}
-            role="textbox"
-            rows={rows}
-            style={style}
-            maxLength={maxLength}
-        />
+        <div className="app-textarea-wrapper" style={{ width: resolvedWidth }}>
+            <textarea
+                ref={ref}
+                id={id}
+                name={name}
+                className={`app-textarea glass glass--inset ${showCounter ? 'app-textarea--with-counter' : ''} ${className}`.trim()}
+                placeholder={placeholder}
+                value={currentValue}
+                onChange={handleChange}
+                disabled={disabled}
+                aria-label={ariaLabel || placeholder || 'Textarea'}
+                role="textbox"
+                rows={rows}
+                style={textareaStyle}
+                maxLength={maxLength}
+            />
+            {showCounter && (
+                <div className="app-textarea__counter" aria-hidden="true">
+                    {counterText}
+                </div>
+            )}
+        </div>
     );
 };
 
