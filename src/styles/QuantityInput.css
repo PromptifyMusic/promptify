@@ -7,12 +7,27 @@
 
   .quantity-input__button {
     @apply w-10 h-10 
-           bg-gray-700 hover:bg-gray-600 
-           disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed
            text-white font-bold text-xl
            transition-colors duration-200
            flex items-center justify-center
            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900;
+
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+
+  .quantity-input__button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.35);
+  }
+
+  .quantity-input__button:disabled {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.4);
+    cursor: not-allowed;
+    box-shadow: none;
   }
 
   .quantity-input__button--decrement {
@@ -25,10 +40,21 @@
 
   .quantity-input__field {
     @apply w-16 h-10
-           bg-gray-800 
            text-white text-center font-semibold
-           border-y-2 border-gray-700
            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:z-10
            transition-all duration-200;
+
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+    border-left: none;
+    border-right: none;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) inset;
+  }
+
+  .quantity-input__field:focus {
+    background: rgba(255, 255, 255, 0.18);
   }
 }
