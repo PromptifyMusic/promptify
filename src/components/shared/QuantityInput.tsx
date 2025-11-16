@@ -88,7 +88,11 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
         onChange={handleInputChange}
         onBlur={handleBlur}
         className="quantity-input__field"
-        aria-label="Quantity input"
+        aria-label="Quantity"
+        role="spinbutton"
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={value}
         inputMode="numeric"
         pattern="[0-9]*"
       />
