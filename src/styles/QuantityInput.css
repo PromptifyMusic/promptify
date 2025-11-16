@@ -10,7 +10,7 @@
            text-white font-bold text-xl
            transition-colors duration-200
            flex items-center justify-center
-           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900;
+           focus:outline-none;
 
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(10px);
@@ -41,7 +41,7 @@
   .quantity-input__field {
     @apply w-16 h-10
            text-white text-center font-semibold
-           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:z-10
+           focus:outline-none focus:ring-2 focus:ring-green-700 focus:z-10
            transition-all duration-200;
 
     background: rgba(255, 255, 255, 0.12);
