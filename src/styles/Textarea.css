@@ -1,0 +1,81 @@
+﻿@import "./index.css";
+
+@layer utilities {
+  .app-textarea {
+    @apply w-full box-border
+           p-3 leading-relaxed
+           rounded-lg
+           text-white font-semibold text-sm
+           bg-transparent
+           transition-all duration-200 ease-out
+           focus:outline-none focus:ring-2 focus:ring-green-700 focus:z-10
+           placeholder:opacity-60 placeholder:text-white
+           disabled:cursor-not-allowed;
+    resize: none;
+    border: 1px solid rgba(255, 255, 255, var(--glass-border-alpha, 0.35));
+    backdrop-filter: blur(var(--glass-blur, 12px));
+    -webkit-backdrop-filter: blur(var(--glass-blur, 12px));
+    background: rgba(255, 255, 255, var(--glass-bg-alpha, 0.14));
+  }
+
+  .app-textarea:hover:not(:disabled) {
+    --glass-bg-alpha: 0.20;
+  }
+
+  .app-textarea:focus {
+    --glass-bg-alpha: 0.18;
+    border-color: rgba(255, 255, 255, 0.55);
+  }
+
+  .app-textarea:disabled {
+    --glass-bg-alpha: 0.10;
+    color: rgba(255, 255, 255, 0.45);
+    box-shadow: none;
+  }
+
+  .app-textarea::-webkit-scrollbar {
+    width: 6px;
+  }
+  .app-textarea::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .app-textarea::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 3px;
+  }
+  .app-textarea::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .app-textarea-wrapper {
+    position: relative;
+    display: block;
+  }
+
+  .app-textarea--with-counter {
+    padding-right: 3.75rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .app-textarea__counter {
+    position: absolute;
+    right: 10px;
+    bottom: 8px;
+    font-size: 0.75rem;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.75);
+    pointer-events: none;
+    user-select: none;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  }
+
+  .app-textarea__counter--warn {
+    color: #fde68a;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  }
+  .app-textarea__counter--critical {
+    color: #fca5a5;
+    font-weight: 700;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  }
+}
