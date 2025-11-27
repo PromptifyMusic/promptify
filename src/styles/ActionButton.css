@@ -1,0 +1,28 @@
+﻿.action-button {
+    background-color: white;
+    border: none;
+    color: black;
+    padding: 12px 48px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: transform 120ms cubic-bezier(.2,.8,.2,1), box-shadow 120ms cubic-bezier(.2,.8,.2,1);
+    will-change: transform;
+}
+
+.action-button:active {
+    transform: translateY(2px) scale(0.97);
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.action-button:focus {
+    outline: none;
+}
+.action-button:focus-visible {
+    outline: 2px solid rgba(38,132,255,0.9);
+    outline-offset: 2px;
+}

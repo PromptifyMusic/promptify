@@ -1,6 +1,7 @@
 ﻿import DarkVeil from "./components/layout/animatedBackground/DarkVeil.tsx";
 import QuantityInput from "./components/shared/QuantityInput";
 import PromptTextarea from "./components/shared/PromptTextarea.tsx";
+import ActionButton from "./components/shared/ActionButton.tsx";
 
 function App() {
     return (
@@ -22,9 +23,12 @@ function App() {
                     />
                 </div>
                 <QuantityInput min={1} max={10} defaultValue={1} />
+                <ActionButton className='bg-white rounded-md ' onClick={()=>{console.log('test')}}>
+                    Utwórz playlistę
+                </ActionButton>
             </div>
         </div>
-    )
+    );
 }
 
 export default App
