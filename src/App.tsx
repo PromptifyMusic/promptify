@@ -7,7 +7,7 @@ import PlaylistItem from "./components/playlist/PlaylistItem.tsx";
 import { useState } from "react";
 
 function App() {
-    const [playlistCreated, setPlaylistCreated] = useState(false);
+    const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
     const [playlistItems, setPlaylistItems] = useState<Array<{title: string, artist: string, duration: string}>>([]);
 
     const handleCreatePlaylist = () => {
@@ -19,7 +19,7 @@ function App() {
             { title: "Song Title 5", artist: "Artist Name 5", duration: "3:56" },
         ];
         setPlaylistItems(mockPlaylist);
-        setPlaylistCreated(true);
+        setIsPlaylistExpanded(true);
     };
 
     return (
@@ -45,28 +45,25 @@ function App() {
                     Utwórz playlistę
                 </ActionButton>
 
-                {playlistCreated && (
-                    <div className="w-full max-w-4xl">
-                        <ExpandablePlaylistBox
-                            maxWidth="800px"
-                            maxHeight="600px"
-                            triggerText="Rozwiń playlistę"
-                            onExpand={() => console.log('Playlista rozwinięta')}
-                            onCollapse={() => console.log('Playlista zwinięta')}
-                        >
-                            <div className="space-y-2">
-                                {playlistItems.map((item, index) => (
-                                    <PlaylistItem
-                                        key={index}
-                                        title={item.title}
-                                        artist={item.artist}
-                                        duration={item.duration}
-                                    />
-                                ))}
-                            </div>
-                        </ExpandablePlaylistBox>
-                    </div>
-                )}
+                <div className="w-full max-w-4xl">
+                    <ExpandablePlaylistBox
+                        maxWidth="800px"
+                        maxHeight="600px"
+                        isExpanded={isPlaylistExpanded}
+                        onCollapse={() => setIsPlaylistExpanded(false)}
+                    >
+                        <div className="space-y-2">
+                            {playlistItems.map((item, index) => (
+                                <PlaylistItem
+                                    key={index}
+                                    title={item.title}
+                                    artist={item.artist}
+                                    duration={item.duration}
+                                />
+                            ))}
+                        </div>
+                    </ExpandablePlaylistBox>
+                </div>
             </div>
         </div>
     );
