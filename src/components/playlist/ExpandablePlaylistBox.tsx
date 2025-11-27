@@ -1,32 +1,22 @@
-﻿import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+﻿import { ChevronUp } from 'lucide-react';
 
 interface ExpandablePlaylistBoxProps {
   maxWidth?: string;
   maxHeight?: string;
-  triggerText?: string;
   children?: React.ReactNode;
-  onExpand?: () => void;
+  isExpanded?: boolean;
   onCollapse?: () => void;
 }
 
 const ExpandablePlaylistBox = ({
   maxWidth = '800px',
   maxHeight = '600px',
-  triggerText = 'Rozwiń playlistę',
   children,
-  onExpand,
+  isExpanded = false,
   onCollapse,
 }: ExpandablePlaylistBoxProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const handleToggle = () => {
-    const newState = !isExpanded;
-    setIsExpanded(newState);
-
-    if (newState && onExpand) {
-      onExpand();
-    } else if (!newState && onCollapse) {
+  const handleCollapse = () => {
+    if (onCollapse) {
       onCollapse();
     }
   };
@@ -61,7 +51,7 @@ const ExpandablePlaylistBox = ({
           <div className="flex items-center justify-between p-4 border-b border-white/20">
             <h3 className="text-white text-lg font-semibold">Playlista</h3>
             <button
-              onClick={handleToggle}
+              onClick={handleCollapse}
               className="p-2 hover:bg-white/10 rounded-full transition-colors duration-200"
               aria-label="Zwiń playlistę"
             >
@@ -78,21 +68,6 @@ const ExpandablePlaylistBox = ({
           </div>
         </div>
       </div>
-
-      {!isExpanded && (
-        <button
-          onClick={handleToggle}
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
-                     px-4 py-2 text-sm text-white/90 hover:text-white
-                     transition-all duration-200 flex items-center gap-2 group"
-          aria-label={triggerText}
-        >
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            {triggerText}
-          </span>
-          <ChevronDown className="w-4 h-4" />
-        </button>
-      )}
     </div>
   );
 };
