@@ -1,0 +1,45 @@
+﻿@import "./index.css";
+
+@layer utilities {
+  .quantity-input {
+    @apply flex items-center gap-0;
+  }
+
+  .quantity-input__button {
+    @apply w-10 h-10 
+           text-white font-bold text-xl
+           transition-colors duration-200
+           flex items-center justify-center
+           focus:outline-none;
+  }
+
+  .quantity-input__button:hover:not(:disabled) {
+    --glass-bg-alpha: 0.35;
+  }
+
+  .quantity-input__button:disabled {
+    --glass-bg-alpha: 0.12;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .quantity-input__button--decrement {
+    @apply rounded-l-lg;
+  }
+
+  .quantity-input__button--increment {
+    @apply rounded-r-lg;
+  }
+
+  .quantity-input__field {
+    @apply w-16 h-10
+           text-white text-center font-semibold
+           focus:outline-none focus:ring-2 focus:ring-green-700 focus:z-10
+           transition-all duration-200;
+  }
+
+  .quantity-input__field:focus {
+    --glass-bg-alpha: 0.18;
+  }
+}
