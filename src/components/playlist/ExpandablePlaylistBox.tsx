@@ -13,7 +13,7 @@ interface ExpandablePlaylistBoxProps {
 
 const ExpandablePlaylistBox = ({
   maxWidth = '800px',
-  minWidth = '800px',
+  minWidth = '400px',
   maxHeight = '600px',
   children,
   isExpanded = false,
