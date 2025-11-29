@@ -71,6 +71,10 @@ function App() {
         }
     };
 
+    const handleDeleteItem = (id: string) => {
+        setPlaylistItems((items) => items.filter((item) => item.id !== id));
+    };
+
     return (
         <div className="relative w-full h-screen overflow-hidden">
             <div className="absolute inset-0 -z-10">
@@ -120,6 +124,7 @@ function App() {
                                             title={item.title}
                                             artist={item.artist}
                                             duration={item.duration}
+                                            onDelete={handleDeleteItem}
                                         />
                                     ))}
                                 </div>

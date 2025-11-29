@@ -1,12 +1,20 @@
 ﻿import { Music } from 'lucide-react';
+import { memo } from 'react';
+import PlaylistItemActions from './PlaylistItemActions';
 
 interface PlaylistItemProps {
+  id: string;
   title: string;
   artist: string;
   duration?: string;
+  onDelete: (id: string) => void;
 }
 
-const PlaylistItem = ({ title, artist, duration }: PlaylistItemProps) => {
+const PlaylistItem = memo(({ id, title, artist, duration, onDelete }: PlaylistItemProps) => {
+  const handleDelete = () => {
+    onDelete(id);
+  };
+
   return (
     <div className="group flex items-center gap-4 p-3 rounded-lg hover:bg-white/5 transition-colors duration-200 cursor-pointer">
       <div className="flex-shrink-0 w-12 h-12 bg-white/10 rounded-md flex items-center justify-center">
@@ -23,8 +31,12 @@ const PlaylistItem = ({ title, artist, duration }: PlaylistItemProps) => {
           {duration}
         </div>
       )}
+
+      <PlaylistItemActions onDelete={handleDelete} />
     </div>
   );
-};
+});
+
+PlaylistItem.displayName = 'PlaylistItem';
 
 export default PlaylistItem;

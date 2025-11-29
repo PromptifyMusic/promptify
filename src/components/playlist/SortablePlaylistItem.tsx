@@ -1,5 +1,6 @@
 ﻿import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { memo } from 'react';
 import PlaylistItem from './PlaylistItem';
 
 interface SortablePlaylistItemProps {
@@ -7,9 +8,10 @@ interface SortablePlaylistItemProps {
   title: string;
   artist: string;
   duration?: string;
+  onDelete: (id: string) => void;
 }
 
-const SortablePlaylistItem = ({ id, title, artist, duration }: SortablePlaylistItemProps) => {
+const SortablePlaylistItem = memo(({ id, title, artist, duration, onDelete }: SortablePlaylistItemProps) => {
   const {
     attributes,
     listeners,
@@ -37,9 +39,11 @@ const SortablePlaylistItem = ({ id, title, artist, duration }: SortablePlaylistI
       {...listeners}
       className={isDragging ? 'shadow-2xl' : ''}
     >
-      <PlaylistItem title={title} artist={artist} duration={duration} />
+      <PlaylistItem id={id} title={title} artist={artist} duration={duration} onDelete={onDelete} />
     </div>
   );
-};
+});
+
+SortablePlaylistItem.displayName = 'SortablePlaylistItem';
 
 export default SortablePlaylistItem;
