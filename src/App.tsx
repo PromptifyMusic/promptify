@@ -17,6 +17,11 @@ function App() {
             { title: "Song Title 3", artist: "Artist Name 3", duration: "3:28" },
             { title: "Song Title 4", artist: "Artist Name 4", duration: "5:01" },
             { title: "Song Title 5", artist: "Artist Name 5", duration: "3:56" },
+            { title: "Song Title 6", artist: "Artist Name 1", duration: "3:45" },
+            { title: "Song Title 7", artist: "Artist Name 2", duration: "4:12" },
+            { title: "Song Title 8", artist: "Artist Name 3", duration: "3:28" },
+            { title: "Song Title 9", artist: "Artist Name 4", duration: "5:01" },
+            { title: "Song Title 10", artist: "Artist Name 5", duration: "3:56" },
         ];
         setPlaylistItems(mockPlaylist);
         setIsPlaylistExpanded(true);
@@ -48,6 +53,7 @@ function App() {
                 <div className="w-full max-w-4xl">
                     <ExpandablePlaylistBox
                         maxWidth="800px"
+                        minWidth="800px"
                         maxHeight="600px"
                         isExpanded={isPlaylistExpanded}
                         onCollapse={() => setIsPlaylistExpanded(false)}

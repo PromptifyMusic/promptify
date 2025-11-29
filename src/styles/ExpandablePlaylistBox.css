@@ -1,0 +1,49 @@
+.playlist-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+  transition: scrollbar-color 0.3s ease;
+}
+
+.playlist-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.playlist-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  margin: 4px 0;
+  transition: background 0.3s ease;
+}
+
+.playlist-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.playlist-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.playlist-scrollbar-hidden {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s ease;
+}
+
+.playlist-scrollbar-hidden::-webkit-scrollbar {
+  width: 8px;
+}
+
+.playlist-scrollbar-hidden::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+  margin: 4px 0;
+  transition: background 0.3s ease;
+}
+
+.playlist-scrollbar-hidden::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
