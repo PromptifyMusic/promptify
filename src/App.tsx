@@ -13,7 +13,6 @@ import {
     useSensor,
     useSensors,
     DragEndEvent,
-    DragStartEvent,
 } from '@dnd-kit/core';
 import {
     arrayMove,
@@ -29,7 +28,6 @@ import {
 function App() {
     const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
     const [playlistItems, setPlaylistItems] = useState<Array<{id: string, title: string, artist: string, duration: string}>>([]);
-    const [activeId, setActiveId] = useState<string | null>(null);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -59,14 +57,9 @@ function App() {
         setIsPlaylistExpanded(true);
     };
 
-    const handleDragStart = (event: DragStartEvent) => {
-        setActiveId(event.active.id as string);
-    };
-
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
 
-        setActiveId(null);
 
         if (over && active.id !== over.id) {
             setPlaylistItems((items) => {
@@ -105,7 +98,6 @@ function App() {
                     <DndContext
                         sensors={sensors}
                         collisionDetection={closestCenter}
-                        onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
                         modifiers={[restrictToVerticalAxis, restrictToParentElement]}
                     >
