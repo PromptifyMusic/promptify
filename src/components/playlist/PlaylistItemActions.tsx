@@ -9,11 +9,11 @@ interface PlaylistItemActionsProps {
 
 const PlaylistItemActions = memo(({ onDelete, onRegenerate, isRegenerating = false }: PlaylistItemActionsProps) => {
   return (
-    <div className="flex-shrink-0 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+    <div className="flex items-center gap-2 overflow-hidden transition-all duration-200 w-0 group-hover:w-[88px]">
       <button
         onClick={onRegenerate}
         disabled={isRegenerating}
-        className="p-2 rounded-md bg-white/5 hover:bg-blue-500/20 text-white/60 hover:text-blue-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="p-2 rounded-md bg-white/5 hover:bg-blue-500/20 text-white/60 hover:text-blue-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed opacity-0 group-hover:opacity-100"
         aria-label="Regeneruj utwór"
         type="button"
       >
@@ -22,7 +22,7 @@ const PlaylistItemActions = memo(({ onDelete, onRegenerate, isRegenerating = fal
       <button
         onClick={onDelete}
         disabled={isRegenerating}
-        className="p-2 rounded-md bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="p-2 rounded-md bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed opacity-0 group-hover:opacity-100"
         aria-label="Usuń utwór"
         type="button"
       >

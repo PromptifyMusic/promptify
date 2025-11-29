@@ -38,19 +38,21 @@ const PlaylistItem = memo(({ id, title, artist, duration, onDelete, onRegenerate
         <p className="text-white/60 text-sm truncate">{artist}</p>
       </div>
 
-      {duration && (
-        <div className={`flex-shrink-0 text-white/50 text-sm transition-opacity duration-200 ${
-          isRegenerating ? 'opacity-50' : ''
-        }`}>
-          {duration}
-        </div>
-      )}
+      <div className="flex items-center gap-2">
+        {duration && (
+          <div className={`flex-shrink-0 text-white/50 text-sm transition-all duration-200 group-hover:translate-x-0 ${
+            isRegenerating ? 'opacity-50' : ''
+          }`}>
+            {duration}
+          </div>
+        )}
 
-      <PlaylistItemActions
-        onDelete={handleDelete}
-        onRegenerate={handleRegenerate}
-        isRegenerating={isRegenerating}
-      />
+        <PlaylistItemActions
+          onDelete={handleDelete}
+          onRegenerate={handleRegenerate}
+          isRegenerating={isRegenerating}
+        />
+      </div>
     </div>
   );
 });
