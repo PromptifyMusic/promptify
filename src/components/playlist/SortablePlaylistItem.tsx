@@ -20,12 +20,13 @@ const SortablePlaylistItem = ({ id, title, artist, duration }: SortablePlaylistI
   } = useSortable({ id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: isDragging
+      ? `${CSS.Transform.toString(transform)} scale(1.02)`
+      : CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.6 : 1,
     cursor: isDragging ? 'grabbing' : 'grab',
     zIndex: isDragging ? 50 : 'auto',
-    scale: isDragging ? '1.02' : '1',
   };
 
   return (
