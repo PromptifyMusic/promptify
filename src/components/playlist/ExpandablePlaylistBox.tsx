@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import '../../styles/ExpandablePlaylistBox.css';
 
+const ANIMATION_DURATION = 500;
+
 interface ExpandablePlaylistBoxProps {
   maxWidth?: string;
   minWidth?: string;
@@ -25,7 +27,7 @@ const ExpandablePlaylistBox = ({
     if (isExpanded) {
       const timer = setTimeout(() => {
         setIsAnimationComplete(true);
-      }, 500);
+      }, ANIMATION_DURATION);
       return () => clearTimeout(timer);
     } else {
       setIsAnimationComplete(false);
