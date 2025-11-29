@@ -21,11 +21,11 @@ const ActionButton = ({
     return (
         <button
             type={type}
-            className={`action-button ${className} ${loading ? 'app-action-button--loading' : ''}`.trim()}
+            className={`action-button ${className} ${loading ? 'action-button--loading' : ''}`.trim()}
             onClick={onClick}
             disabled={disabled || loading}
         >
-            {loading ? <span className="app-action-button__spinner" aria-label="Loading"></span> : children}
+            {loading ? <span className="action-button__spinner" aria-label="Loading"></span> : children}
         </button>
     );
 }
