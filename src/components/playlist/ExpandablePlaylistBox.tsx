@@ -1,4 +1,5 @@
 ﻿import { ChevronUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import '../../styles/ExpandablePlaylistBox.css';
 
 interface ExpandablePlaylistBoxProps {
@@ -16,6 +17,21 @@ const ExpandablePlaylistBox = ({
   isExpanded = false,
   onCollapse,
 }: ExpandablePlaylistBoxProps) => {
+  const [isAnimationComplete, setIsAnimationComplete] = useState(false);
+
+  useEffect(() => {
+    if (isExpanded) {
+      // Show scrollbar after animation completes (500ms)
+      const timer = setTimeout(() => {
+        setIsAnimationComplete(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      // Hide scrollbar immediately when collapsing
+      setIsAnimationComplete(false);
+    }
+  }, [isExpanded]);
+
   const handleCollapse = () => {
     if (onCollapse) {
       onCollapse();
@@ -60,7 +76,9 @@ const ExpandablePlaylistBox = ({
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
+          <div className={`flex-1 overflow-y-auto p-4 ${
+            isAnimationComplete ? 'playlist-scrollbar' : 'playlist-scrollbar-hidden'
+          }`}>
             {children || (
               <div className="text-white/70 text-center py-8">
                 Brak elementów w playliście
