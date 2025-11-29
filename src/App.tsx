@@ -74,6 +74,11 @@ function App() {
 
     const handleDeleteItem = (id: string) => {
         setPlaylistItems((items) => items.filter((item) => item.id !== id));
+        setRegeneratingItems((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+        });
     };
 
     const handleRegenerateItem = async (id: string) => {
