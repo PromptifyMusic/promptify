@@ -24,7 +24,6 @@ function App() {
                 </div>
                 <QuantityInput min={1} max={10} defaultValue={1} />
                 <ActionButton
-                    className='bg-white rounded-md '
                     onClick={()=>{console.log('test')}}
                     loading={false}
                 >
