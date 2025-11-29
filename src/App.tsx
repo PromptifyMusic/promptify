@@ -79,29 +79,36 @@ function App() {
     const handleRegenerateItem = async (id: string) => {
         setRegeneratingItems((prev) => new Set(prev).add(id));
 
-        // Mock API call - 3 sekundowe opóźnienie
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        try {
+            // Mock API call - 3 sekundowe opóźnienie
+            await new Promise((resolve) => setTimeout(resolve, 3000));
 
-        // Mock nowych danych
-        const mockArtists = ['New Artist A', 'New Artist B', 'New Artist C', 'New Artist D', 'New Artist E'];
-        const mockTitles = ['Fresh Song', 'New Track', 'Another Hit', 'Different Tune', 'Random Song'];
-        const randomArtist = mockArtists[Math.floor(Math.random() * mockArtists.length)];
-        const randomTitle = mockTitles[Math.floor(Math.random() * mockTitles.length)];
-        const randomDuration = `${Math.floor(Math.random() * 3 + 2)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`;
+            // Mock nowych danych
+            const mockArtists = ['New Artist A', 'New Artist B', 'New Artist C', 'New Artist D', 'New Artist E'];
+            const mockTitles = ['Fresh Song', 'New Track', 'Another Hit', 'Different Tune', 'Random Song'];
+            const randomArtist = mockArtists[Math.floor(Math.random() * mockArtists.length)];
+            const randomTitle = mockTitles[Math.floor(Math.random() * mockTitles.length)];
+            const randomDuration = `${Math.floor(Math.random() * 3 + 2)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`;
 
-        setPlaylistItems((items) =>
-            items.map((item) =>
-                item.id === id
-                    ? { ...item, title: randomTitle, artist: randomArtist, duration: randomDuration }
-                    : item
-            )
-        );
-
-        setRegeneratingItems((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(id);
-            return newSet;
-        });
+            setPlaylistItems((items) => {
+                if (!items.some((item) => item.id === id)) {
+                    return items;
+                }
+                return items.map((item) =>
+                    item.id === id
+                        ? { ...item, title: randomTitle, artist: randomArtist, duration: randomDuration }
+                        : item
+                );
+            });
+        } catch (error) {
+            console.error('Error during regeneration:', error);
+        } finally {
+            setRegeneratingItems((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(id);
+                return newSet;
+            });
+        }
     };
 
     return (
