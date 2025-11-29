@@ -38,7 +38,7 @@ const PlaylistItem = memo(({ id, title, artist, duration, onDelete, onRegenerate
         <p className="text-white/60 text-sm truncate">{artist}</p>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {duration && (
           <div className={`flex-shrink-0 text-white/50 text-sm transition-all duration-200 group-hover:translate-x-0 ${
             isRegenerating ? 'opacity-50' : ''
@@ -46,12 +46,13 @@ const PlaylistItem = memo(({ id, title, artist, duration, onDelete, onRegenerate
             {duration}
           </div>
         )}
-
-        <PlaylistItemActions
-          onDelete={handleDelete}
-          onRegenerate={handleRegenerate}
-          isRegenerating={isRegenerating}
-        />
+        <div className="ml-5">
+            <PlaylistItemActions
+                onDelete={handleDelete}
+                onRegenerate={handleRegenerate}
+                isRegenerating={isRegenerating}
+            />
+        </div>
       </div>
     </div>
   );
