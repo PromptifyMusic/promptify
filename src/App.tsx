@@ -134,7 +134,12 @@ function App() {
                         placeholder="Wprowadź prompt do utworzenia playlisty"
                     />
                 </div>
-                <QuantityInput min={1} max={10} defaultValue={1} />
+                <div className="flex flex-col items-center gap-2">
+                    <QuantityInput min={1} max={10} defaultValue={1} />
+                    <span className="text-white/50 text-sm">
+                        Liczba utworów w playliście
+                    </span>
+                </div>
                 <ActionButton className='bg-white rounded-md ' onClick={handleCreatePlaylist}>
                     Utwórz playlistę
                 </ActionButton>
