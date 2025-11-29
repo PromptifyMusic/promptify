@@ -4,6 +4,7 @@ import '../../styles/ExpandablePlaylistBox.css';
 
 interface ExpandablePlaylistBoxProps {
   maxWidth?: string;
+  minWidth?: string;
   maxHeight?: string;
   children?: React.ReactNode;
   isExpanded?: boolean;
@@ -12,6 +13,7 @@ interface ExpandablePlaylistBoxProps {
 
 const ExpandablePlaylistBox = ({
   maxWidth = '800px',
+  minWidth = '800px',
   maxHeight = '600px',
   children,
   isExpanded = false,
@@ -21,13 +23,11 @@ const ExpandablePlaylistBox = ({
 
   useEffect(() => {
     if (isExpanded) {
-      // Show scrollbar after animation completes (500ms)
       const timer = setTimeout(() => {
         setIsAnimationComplete(true);
       }, 500);
       return () => clearTimeout(timer);
     } else {
-      // Hide scrollbar immediately when collapsing
       setIsAnimationComplete(false);
     }
   }, [isExpanded]);
@@ -40,9 +40,8 @@ const ExpandablePlaylistBox = ({
 
   return (
     <div
-      className="relative transition-all duration-500 ease-in-out overflow-hidden"
+      className="relative w-full transition-all duration-500 ease-in-out overflow-hidden"
       style={{
-        maxWidth: isExpanded ? maxWidth : '100%',
         height: isExpanded ? maxHeight : '4px',
       }}
     >
@@ -55,15 +54,15 @@ const ExpandablePlaylistBox = ({
       </div>
 
       <div
-        className={`absolute inset-0 transition-all duration-500 ${
+        className={`absolute inset-0 flex items-start justify-center transition-all duration-500 ${
           isExpanded
             ? 'opacity-100 scale-100'
             : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
         <div
-          className="w-full h-full backdrop-blur-md bg-white/10 border border-white/20 rounded-lg shadow-2xl overflow-hidden flex flex-col"
-          style={{ maxHeight }}
+          className="h-full backdrop-blur-md bg-white/10 border border-white/20 rounded-lg shadow-2xl overflow-hidden flex flex-col"
+          style={{ maxHeight, maxWidth, minWidth }}
         >
           <div className="flex items-center justify-between p-4 border-b border-white/20">
             <h3 className="text-white text-lg font-semibold">Playlista</h3>

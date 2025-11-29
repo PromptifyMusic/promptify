@@ -53,6 +53,7 @@ function App() {
                 <div className="w-full max-w-4xl">
                     <ExpandablePlaylistBox
                         maxWidth="800px"
+                        minWidth="800px"
                         maxHeight="600px"
                         isExpanded={isPlaylistExpanded}
                         onCollapse={() => setIsPlaylistExpanded(false)}
