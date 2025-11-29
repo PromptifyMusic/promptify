@@ -27,6 +27,12 @@
     outline-offset: 2px;
 }
 
+.action-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .action-button--loading {
     pointer-events: none;
     opacity: 0.85;
