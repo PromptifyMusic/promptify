@@ -3,28 +3,72 @@ import QuantityInput from "./components/shared/QuantityInput";
 import PromptTextarea from "./components/shared/PromptTextarea.tsx";
 import ActionButton from "./components/shared/ActionButton.tsx";
 import ExpandablePlaylistBox from "./components/playlist/ExpandablePlaylistBox.tsx";
-import PlaylistItem from "./components/playlist/PlaylistItem.tsx";
+import SortablePlaylistItem from "./components/playlist/SortablePlaylistItem.tsx";
 import { useState } from "react";
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+    restrictToVerticalAxis,
+    restrictToParentElement,
+} from '@dnd-kit/modifiers';
 
 function App() {
     const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
-    const [playlistItems, setPlaylistItems] = useState<Array<{title: string, artist: string, duration: string}>>([]);
+    const [playlistItems, setPlaylistItems] = useState<Array<{id: string, title: string, artist: string, duration: string}>>([]);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     const handleCreatePlaylist = () => {
         const mockPlaylist = [
-            { title: "Song Title 1", artist: "Artist Name 1", duration: "3:45" },
-            { title: "Song Title 2", artist: "Artist Name 2", duration: "4:12" },
-            { title: "Song Title 3", artist: "Artist Name 3", duration: "3:28" },
-            { title: "Song Title 4", artist: "Artist Name 4", duration: "5:01" },
-            { title: "Song Title 5", artist: "Artist Name 5", duration: "3:56" },
-            { title: "Song Title 6", artist: "Artist Name 1", duration: "3:45" },
-            { title: "Song Title 7", artist: "Artist Name 2", duration: "4:12" },
-            { title: "Song Title 8", artist: "Artist Name 3", duration: "3:28" },
-            { title: "Song Title 9", artist: "Artist Name 4", duration: "5:01" },
-            { title: "Song Title 10", artist: "Artist Name 5", duration: "3:56" },
+            { id: "1", title: "Song Title 1", artist: "Artist Name 1", duration: "3:45" },
+            { id: "2", title: "Song Title 2", artist: "Artist Name 2", duration: "4:12" },
+            { id: "3", title: "Song Title 3", artist: "Artist Name 3", duration: "3:28" },
+            { id: "4", title: "Song Title 4", artist: "Artist Name 4", duration: "5:01" },
+            { id: "5", title: "Song Title 5", artist: "Artist Name 5", duration: "3:56" },
+            { id: "6", title: "Song Title 6", artist: "Artist Name 1", duration: "3:45" },
+            { id: "7", title: "Song Title 7", artist: "Artist Name 2", duration: "4:12" },
+            { id: "8", title: "Song Title 8", artist: "Artist Name 3", duration: "3:28" },
+            { id: "9", title: "Song Title 9", artist: "Artist Name 4", duration: "5:01" },
+            { id: "10", title: "Song Title 10", artist: "Artist Name 5", duration: "3:56" },
         ];
         setPlaylistItems(mockPlaylist);
         setIsPlaylistExpanded(true);
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+
+
+        if (over && active.id !== over.id) {
+            setPlaylistItems((items) => {
+                const oldIndex = items.findIndex((item) => item.id === active.id);
+                const newIndex = items.findIndex((item) => item.id === over.id);
+
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
     };
 
     return (
@@ -51,24 +95,37 @@ function App() {
                 </ActionButton>
 
                 <div className="w-full max-w-4xl">
-                    <ExpandablePlaylistBox
-                        maxWidth="800px"
-                        minWidth="800px"
-                        maxHeight="600px"
-                        isExpanded={isPlaylistExpanded}
-                        onCollapse={() => setIsPlaylistExpanded(false)}
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
                     >
-                        <div className="space-y-2">
-                            {playlistItems.map((item, index) => (
-                                <PlaylistItem
-                                    key={index}
-                                    title={item.title}
-                                    artist={item.artist}
-                                    duration={item.duration}
-                                />
-                            ))}
-                        </div>
-                    </ExpandablePlaylistBox>
+                        <ExpandablePlaylistBox
+                            maxWidth="800px"
+                            minWidth="800px"
+                            maxHeight="600px"
+                            isExpanded={isPlaylistExpanded}
+                            onCollapse={() => setIsPlaylistExpanded(false)}
+                        >
+                            <SortableContext
+                                items={playlistItems.map(item => item.id)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                <div className="space-y-2">
+                                    {playlistItems.map((item) => (
+                                        <SortablePlaylistItem
+                                            key={item.id}
+                                            id={item.id}
+                                            title={item.title}
+                                            artist={item.artist}
+                                            duration={item.duration}
+                                        />
+                                    ))}
+                                </div>
+                            </SortableContext>
+                        </ExpandablePlaylistBox>
+                    </DndContext>
                 </div>
             </div>
         </div>
