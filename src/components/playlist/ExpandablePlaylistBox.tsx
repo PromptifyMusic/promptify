@@ -1,4 +1,5 @@
 ﻿import { ChevronUp } from 'lucide-react';
+import '../../styles/ExpandablePlaylistBox.css';
 
 interface ExpandablePlaylistBoxProps {
   maxWidth?: string;
@@ -59,7 +60,7 @@ const ExpandablePlaylistBox = ({
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
             {children || (
               <div className="text-white/70 text-center py-8">
                 Brak elementów w playliście
