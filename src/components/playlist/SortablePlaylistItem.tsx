@@ -9,9 +9,11 @@ interface SortablePlaylistItemProps {
   artist: string;
   duration?: string;
   onDelete: (id: string) => void;
+  onRegenerate: (id: string) => void;
+  isRegenerating?: boolean;
 }
 
-const SortablePlaylistItem = memo(({ id, title, artist, duration, onDelete }: SortablePlaylistItemProps) => {
+const SortablePlaylistItem = memo(({ id, title, artist, duration, onDelete, onRegenerate, isRegenerating = false }: SortablePlaylistItemProps) => {
   const {
     attributes,
     listeners,
@@ -39,7 +41,15 @@ const SortablePlaylistItem = memo(({ id, title, artist, duration, onDelete }: So
       {...listeners}
       className={isDragging ? 'shadow-2xl' : ''}
     >
-      <PlaylistItem id={id} title={title} artist={artist} duration={duration} onDelete={onDelete} />
+      <PlaylistItem
+        id={id}
+        title={title}
+        artist={artist}
+        duration={duration}
+        onDelete={onDelete}
+        onRegenerate={onRegenerate}
+        isRegenerating={isRegenerating}
+      />
     </div>
   );
 });

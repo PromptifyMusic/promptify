@@ -28,6 +28,7 @@ import {
 function App() {
     const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
     const [playlistItems, setPlaylistItems] = useState<Array<{id: string, title: string, artist: string, duration: string}>>([]);
+    const [regeneratingItems, setRegeneratingItems] = useState<Set<string>>(new Set());
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -73,6 +74,34 @@ function App() {
 
     const handleDeleteItem = (id: string) => {
         setPlaylistItems((items) => items.filter((item) => item.id !== id));
+    };
+
+    const handleRegenerateItem = async (id: string) => {
+        setRegeneratingItems((prev) => new Set(prev).add(id));
+
+        // Mock API call - 3 sekundowe opóźnienie
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        // Mock nowych danych
+        const mockArtists = ['New Artist A', 'New Artist B', 'New Artist C', 'New Artist D', 'New Artist E'];
+        const mockTitles = ['Fresh Song', 'New Track', 'Another Hit', 'Different Tune', 'Random Song'];
+        const randomArtist = mockArtists[Math.floor(Math.random() * mockArtists.length)];
+        const randomTitle = mockTitles[Math.floor(Math.random() * mockTitles.length)];
+        const randomDuration = `${Math.floor(Math.random() * 3 + 2)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`;
+
+        setPlaylistItems((items) =>
+            items.map((item) =>
+                item.id === id
+                    ? { ...item, title: randomTitle, artist: randomArtist, duration: randomDuration }
+                    : item
+            )
+        );
+
+        setRegeneratingItems((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+        });
     };
 
     return (
@@ -125,6 +154,8 @@ function App() {
                                             artist={item.artist}
                                             duration={item.duration}
                                             onDelete={handleDeleteItem}
+                                            onRegenerate={handleRegenerateItem}
+                                            isRegenerating={regeneratingItems.has(item.id)}
                                         />
                                     ))}
                                 </div>
