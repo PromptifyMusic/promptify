@@ -43,4 +43,3 @@ const SortablePlaylistItem = ({ id, title, artist, duration }: SortablePlaylistI
 };
 
 export default SortablePlaylistItem;
-
