@@ -10,9 +10,11 @@ interface InputSectionProps {
     isLoading?: boolean;
 }
 
+const DEFAULT_QUANTITY = 15;
+
 function InputSection({ isPlaylistExpanded, onCreatePlaylist, isLoading = false }: InputSectionProps) {
     const [prompt, setPrompt] = useState<string>("");
-    const [quantity, setQuantity] = useState<number>(1);
+    const [quantity, setQuantity] = useState<number>(DEFAULT_QUANTITY);
 
     const handleCreateClick = () => {
         onCreatePlaylist(prompt, quantity);
@@ -35,7 +37,7 @@ function InputSection({ isPlaylistExpanded, onCreatePlaylist, isLoading = false 
                 <QuantityInput
                     min={1}
                     max={50}
-                    defaultValue={15}
+                    defaultValue={DEFAULT_QUANTITY}
                     onChange={setQuantity}
                 />
                 <span className="text-white/50 text-sm">
