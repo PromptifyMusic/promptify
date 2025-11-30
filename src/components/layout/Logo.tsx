@@ -3,7 +3,6 @@ import { AudioLines } from 'lucide-react';
 import '../../styles/Logo.css';
 
 interface LogoProps {
-  isHidden?: boolean;
   className?: string;
 }
 
