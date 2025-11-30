@@ -1,44 +1,14 @@
 ﻿import DarkVeil from "./components/layout/animatedBackground/DarkVeil.tsx";
-import ExpandablePlaylistBox from "./components/playlist/ExpandablePlaylistBox.tsx";
-import SortablePlaylistItem from "./components/playlist/SortablePlaylistItem.tsx";
 import InputSection from "./components/layout/InputSection.tsx";
+import PlaylistSection, { PlaylistItem } from "./components/playlist/PlaylistSection.tsx";
 import { useState } from "react";
-import {
-    DndContext,
-    closestCenter,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    DragEndEvent,
-} from '@dnd-kit/core';
-import {
-    arrayMove,
-    SortableContext,
-    sortableKeyboardCoordinates,
-    verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import {
-    restrictToVerticalAxis,
-    restrictToParentElement,
-} from '@dnd-kit/modifiers';
 
 function App() {
     const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
-    const [playlistItems, setPlaylistItems] = useState<Array<{id: string, title: string, artist: string, duration: string}>>([]);
+    const [playlistItems, setPlaylistItems] = useState<PlaylistItem[]>([]);
     const [regeneratingItems, setRegeneratingItems] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(false);
 
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 8,
-            },
-        }),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates,
-        })
-    );
 
     const handleCreatePlaylist = async () => {
         setIsLoading(true);
@@ -68,18 +38,8 @@ function App() {
         }
     };
 
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-
-
-        if (over && active.id !== over.id) {
-            setPlaylistItems((items) => {
-                const oldIndex = items.findIndex((item) => item.id === active.id);
-                const newIndex = items.findIndex((item) => item.id === over.id);
-
-                return arrayMove(items, oldIndex, newIndex);
-            });
-        }
+    const handleReorderItems = (reorderedItems: PlaylistItem[]) => {
+        setPlaylistItems(reorderedItems);
     };
 
     const handleDeleteItem = (id: string) => {
@@ -143,42 +103,15 @@ function App() {
                     onCreatePlaylist={handleCreatePlaylist}
                     isLoading={isLoading}
                 />
-                <div className="w-full max-w-4xl">
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-                    >
-                        <ExpandablePlaylistBox
-                            maxWidth="800px"
-                            minWidth="800px"
-                            maxHeight="600px"
-                            isExpanded={isPlaylistExpanded}
-                            onCollapse={() => setIsPlaylistExpanded(false)}
-                        >
-                            <SortableContext
-                                items={playlistItems.map(item => item.id)}
-                                strategy={verticalListSortingStrategy}
-                            >
-                                <div className="space-y-2">
-                                    {playlistItems.map((item) => (
-                                        <SortablePlaylistItem
-                                            key={item.id}
-                                            id={item.id}
-                                            title={item.title}
-                                            artist={item.artist}
-                                            duration={item.duration}
-                                            onDelete={handleDeleteItem}
-                                            onRegenerate={handleRegenerateItem}
-                                            isRegenerating={regeneratingItems.has(item.id)}
-                                        />
-                                    ))}
-                                </div>
-                            </SortableContext>
-                        </ExpandablePlaylistBox>
-                    </DndContext>
-                </div>
+                <PlaylistSection
+                    isExpanded={isPlaylistExpanded}
+                    playlistItems={playlistItems}
+                    regeneratingItems={regeneratingItems}
+                    onCollapse={() => setIsPlaylistExpanded(false)}
+                    onReorderItems={handleReorderItems}
+                    onDeleteItem={handleDeleteItem}
+                    onRegenerateItem={handleRegenerateItem}
+                />
             </div>
         </div>
     );
