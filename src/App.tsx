@@ -27,6 +27,7 @@ function App() {
     const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
     const [playlistItems, setPlaylistItems] = useState<Array<{id: string, title: string, artist: string, duration: string}>>([]);
     const [regeneratingItems, setRegeneratingItems] = useState<Set<string>>(new Set());
+    const [isLoading, setIsLoading] = useState(false);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -39,21 +40,32 @@ function App() {
         })
     );
 
-    const handleCreatePlaylist = () => {
-        const mockPlaylist = [
-            { id: "1", title: "Song Title 1", artist: "Artist Name 1", duration: "3:45" },
-            { id: "2", title: "Song Title 2", artist: "Artist Name 2", duration: "4:12" },
-            { id: "3", title: "Song Title 3", artist: "Artist Name 3", duration: "3:28" },
-            { id: "4", title: "Song Title 4", artist: "Artist Name 4", duration: "5:01" },
-            { id: "5", title: "Song Title 5", artist: "Artist Name 5", duration: "3:56" },
-            { id: "6", title: "Song Title 6", artist: "Artist Name 1", duration: "3:45" },
-            { id: "7", title: "Song Title 7", artist: "Artist Name 2", duration: "4:12" },
-            { id: "8", title: "Song Title 8", artist: "Artist Name 3", duration: "3:28" },
-            { id: "9", title: "Song Title 9", artist: "Artist Name 4", duration: "5:01" },
-            { id: "10", title: "Song Title 10", artist: "Artist Name 5", duration: "3:56" },
-        ];
-        setPlaylistItems(mockPlaylist);
-        setIsPlaylistExpanded(true);
+    const handleCreatePlaylist = async () => {
+        setIsLoading(true);
+
+        try {
+            // Mock API call - 3 sekundowe opóźnienie
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+
+            const mockPlaylist = [
+                { id: "1", title: "Song Title 1", artist: "Artist Name 1", duration: "3:45" },
+                { id: "2", title: "Song Title 2", artist: "Artist Name 2", duration: "4:12" },
+                { id: "3", title: "Song Title 3", artist: "Artist Name 3", duration: "3:28" },
+                { id: "4", title: "Song Title 4", artist: "Artist Name 4", duration: "5:01" },
+                { id: "5", title: "Song Title 5", artist: "Artist Name 5", duration: "3:56" },
+                { id: "6", title: "Song Title 6", artist: "Artist Name 1", duration: "3:45" },
+                { id: "7", title: "Song Title 7", artist: "Artist Name 2", duration: "4:12" },
+                { id: "8", title: "Song Title 8", artist: "Artist Name 3", duration: "3:28" },
+                { id: "9", title: "Song Title 9", artist: "Artist Name 4", duration: "5:01" },
+                { id: "10", title: "Song Title 10", artist: "Artist Name 5", duration: "3:56" },
+            ];
+            setPlaylistItems(mockPlaylist);
+            setIsPlaylistExpanded(true);
+        } catch (error) {
+            console.error('Error during playlist creation:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
@@ -129,6 +141,7 @@ function App() {
                 <InputSection
                     isPlaylistExpanded={isPlaylistExpanded}
                     onCreatePlaylist={handleCreatePlaylist}
+                    isLoading={isLoading}
                 />
                 <div className="w-full max-w-4xl">
                     <DndContext

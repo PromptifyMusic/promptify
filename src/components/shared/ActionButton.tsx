@@ -25,7 +25,10 @@ const ActionButton = ({
             onClick={onClick}
             disabled={disabled || loading}
         >
-            {loading ? <span className="action-button__spinner" aria-label="Loading"></span> : children}
+            <span className={`action-button__content ${loading ? 'action-button__content--hidden' : ''}`}>
+                {children}
+            </span>
+            {loading && <span className="action-button__spinner" aria-label="Loading"></span>}
         </button>
     );
 }

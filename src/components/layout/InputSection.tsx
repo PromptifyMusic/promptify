@@ -6,9 +6,10 @@ import Logo from "../shared/Logo";
 interface InputSectionProps {
     isPlaylistExpanded: boolean;
     onCreatePlaylist: () => void;
+    isLoading?: boolean;
 }
 
-function InputSection({ isPlaylistExpanded, onCreatePlaylist }: InputSectionProps) {
+function InputSection({ isPlaylistExpanded, onCreatePlaylist, isLoading = false }: InputSectionProps) {
     return (
         <div className={`logo-container flex flex-col items-center justify-center gap-6 ${isPlaylistExpanded ? 'fade-out' : 'fade-in'}`}>
             <Logo className="mb-15" />
@@ -26,7 +27,7 @@ function InputSection({ isPlaylistExpanded, onCreatePlaylist }: InputSectionProp
                     Liczba utworów w playliście
                 </span>
             </div>
-            <ActionButton className='bg-white rounded-md' onClick={onCreatePlaylist}>
+            <ActionButton className='bg-white rounded-md' onClick={onCreatePlaylist} loading={isLoading}>
                 Utwórz playlistę
             </ActionButton>
         </div>
