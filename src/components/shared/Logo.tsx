@@ -1,0 +1,22 @@
+﻿import React from 'react';
+import { AudioLines } from 'lucide-react';
+import '../../styles/Logo.css';
+
+interface LogoProps {
+  isHidden?: boolean;
+  className?: string;
+}
+
+const Logo: React.FC<LogoProps> = ({ isHidden = false, className = '' }) => {
+  return (
+    <div className={`logo-container flex items-center gap-3 mb-8 ${isHidden ? 'fade-out' : 'fade-in'} ${className}`}>
+      <AudioLines className="w-10 h-10 text-white/90" strokeWidth={2} />
+      <h1 className="text-5xl font-bold text-white/90 tracking-wide">
+        promptify
+      </h1>
+    </div>
+  );
+};
+
+export default Logo;
+

@@ -1,0 +1,19 @@
+﻿.logo-container {
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out, max-height 0.5s ease-out, margin-bottom 0.5s ease-out;
+  max-height: 200px;
+  overflow: hidden;
+}
+
+.logo-container.fade-out {
+  opacity: 0;
+  transform: translateY(-20px);
+  pointer-events: none;
+  max-height: 0;
+  margin-bottom: 0 !important;
+}
+
+.logo-container.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+

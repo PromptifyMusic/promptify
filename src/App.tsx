@@ -4,6 +4,7 @@ import PromptTextarea from "./components/shared/PromptTextarea.tsx";
 import ActionButton from "./components/shared/ActionButton.tsx";
 import ExpandablePlaylistBox from "./components/playlist/ExpandablePlaylistBox.tsx";
 import SortablePlaylistItem from "./components/playlist/SortablePlaylistItem.tsx";
+import Logo from "./components/shared/Logo.tsx";
 import { useState } from "react";
 import {
     DndContext,
@@ -128,6 +129,8 @@ function App() {
             </div>
 
             <div className="relative z-10 w-full h-full flex flex-col items-center justify-center gap-8 p-8">
+                <Logo isHidden={isPlaylistExpanded} />
+
                 <div className="w-1/3">
                     <PromptTextarea
                         maxLength={250}
