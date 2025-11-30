@@ -20,6 +20,7 @@ import {
 } from '@dnd-kit/modifiers';
 import ExpandablePlaylistBox from './ExpandablePlaylistBox.tsx';
 import SortablePlaylistItem from './SortablePlaylistItem.tsx';
+import AddPlaylistItem from './AddPlaylistItem.tsx';
 
 export interface PlaylistItem {
     id: string;
@@ -33,10 +34,13 @@ interface PlaylistSectionProps {
     playlistItems: PlaylistItem[];
     regeneratingItems: Set<string>;
     deletingItems: Set<string>;
+    initialQuantity: number;
+    isAddingItem: boolean;
     onCollapse: () => void;
     onReorderItems: (items: PlaylistItem[]) => void;
     onDeleteItem: (id: string) => void;
     onRegenerateItem: (id: string) => void;
+    onAddItem: () => void;
 }
 
 const PlaylistSection = memo(({
@@ -44,10 +48,13 @@ const PlaylistSection = memo(({
     playlistItems,
     regeneratingItems,
     deletingItems,
+    initialQuantity,
+    isAddingItem,
     onCollapse,
     onReorderItems,
     onDeleteItem,
     onRegenerateItem,
+    onAddItem,
 }: PlaylistSectionProps) => {
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -104,6 +111,12 @@ const PlaylistSection = memo(({
                                     isDeleting={deletingItems.has(item.id)}
                                 />
                             ))}
+                            {playlistItems.length < initialQuantity && (
+                                <AddPlaylistItem
+                                    onAdd={onAddItem}
+                                    isAdding={isAddingItem}
+                                />
+                            )}
                         </div>
                     </SortableContext>
                 </ExpandablePlaylistBox>
