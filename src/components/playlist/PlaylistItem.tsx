@@ -10,9 +10,10 @@ interface PlaylistItemProps {
   onDelete: (id: string) => void;
   onRegenerate: (id: string) => void;
   isRegenerating?: boolean;
+  isDeleting?: boolean;
 }
 
-const PlaylistItem = memo(({ id, title, artist, duration, onDelete, onRegenerate, isRegenerating = false }: PlaylistItemProps) => {
+const PlaylistItem = memo(({ id, title, artist, duration, onDelete, onRegenerate, isRegenerating = false, isDeleting = false }: PlaylistItemProps) => {
   const handleDelete = () => {
     onDelete(id);
   };
@@ -24,7 +25,7 @@ const PlaylistItem = memo(({ id, title, artist, duration, onDelete, onRegenerate
   return (
     <div className={`group flex items-center gap-4 p-3 rounded-lg hover:bg-white/5 transition-all duration-200 cursor-pointer ${
       isRegenerating ? 'animate-pulse bg-white/5' : ''
-    }`}>
+    } ${isDeleting ? 'scale-95 blur-sm' : ''}`}>
       <div className={`flex-shrink-0 w-12 h-12 bg-white/10 rounded-md flex items-center justify-center transition-opacity duration-200 ${
         isRegenerating ? 'opacity-50' : ''
       }`}>

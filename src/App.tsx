@@ -7,6 +7,7 @@ function App() {
     const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
     const [playlistItems, setPlaylistItems] = useState<PlaylistItem[]>([]);
     const [regeneratingItems, setRegeneratingItems] = useState<Set<string>>(new Set());
+    const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(false);
 
 
@@ -50,12 +51,23 @@ function App() {
     };
 
     const handleDeleteItem = (id: string) => {
-        setPlaylistItems((items) => items.filter((item) => item.id !== id));
-        setRegeneratingItems((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(id);
-            return newSet;
-        });
+        // Oznacz element jako usuwany (rozpocznij animację)
+        setDeletingItems((prev) => new Set(prev).add(id));
+
+        // Usuń element po zakończeniu animacji (300ms)
+        setTimeout(() => {
+            setPlaylistItems((items) => items.filter((item) => item.id !== id));
+            setRegeneratingItems((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(id);
+                return newSet;
+            });
+            setDeletingItems((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(id);
+                return newSet;
+            });
+        }, 300);
     };
 
     const handleRegenerateItem = async (id: string) => {
@@ -114,6 +126,7 @@ function App() {
                     isExpanded={isPlaylistExpanded}
                     playlistItems={playlistItems}
                     regeneratingItems={regeneratingItems}
+                    deletingItems={deletingItems}
                     onCollapse={() => setIsPlaylistExpanded(false)}
                     onReorderItems={handleReorderItems}
                     onDeleteItem={handleDeleteItem}

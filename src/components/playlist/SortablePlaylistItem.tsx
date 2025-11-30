@@ -11,9 +11,10 @@ interface SortablePlaylistItemProps {
   onDelete: (id: string) => void;
   onRegenerate: (id: string) => void;
   isRegenerating?: boolean;
+  isDeleting?: boolean;
 }
 
-const SortablePlaylistItem = memo(({ id, title, artist, duration, onDelete, onRegenerate, isRegenerating = false }: SortablePlaylistItemProps) => {
+const SortablePlaylistItem = memo(({ id, title, artist, duration, onDelete, onRegenerate, isRegenerating = false, isDeleting = false }: SortablePlaylistItemProps) => {
   const {
     attributes,
     listeners,
@@ -27,10 +28,13 @@ const SortablePlaylistItem = memo(({ id, title, artist, duration, onDelete, onRe
     transform: isDragging
       ? `${CSS.Transform.toString(transform)} scale(1.02)`
       : CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.6 : 1,
+    transition: isDeleting ? 'all 0.3s ease-out' : transition,
+    opacity: isDeleting ? 0 : (isDragging ? 0.6 : 1),
     cursor: isDragging ? 'grabbing' : 'grab',
     zIndex: isDragging ? 50 : 'auto',
+    maxHeight: isDeleting ? '0px' : '200px',
+    overflow: isDeleting ? 'hidden' : 'visible',
+    marginBottom: isDeleting ? '0' : undefined,
   };
 
   return (
@@ -49,6 +53,7 @@ const SortablePlaylistItem = memo(({ id, title, artist, duration, onDelete, onRe
         onDelete={onDelete}
         onRegenerate={onRegenerate}
         isRegenerating={isRegenerating}
+        isDeleting={isDeleting}
       />
     </div>
   );

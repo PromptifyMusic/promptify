@@ -32,6 +32,7 @@ interface PlaylistSectionProps {
     isExpanded: boolean;
     playlistItems: PlaylistItem[];
     regeneratingItems: Set<string>;
+    deletingItems: Set<string>;
     onCollapse: () => void;
     onReorderItems: (items: PlaylistItem[]) => void;
     onDeleteItem: (id: string) => void;
@@ -42,6 +43,7 @@ const PlaylistSection = memo(({
     isExpanded,
     playlistItems,
     regeneratingItems,
+    deletingItems,
     onCollapse,
     onReorderItems,
     onDeleteItem,
@@ -99,6 +101,7 @@ const PlaylistSection = memo(({
                                     onDelete={onDeleteItem}
                                     onRegenerate={onRegenerateItem}
                                     isRegenerating={regeneratingItems.has(item.id)}
+                                    isDeleting={deletingItems.has(item.id)}
                                 />
                             ))}
                         </div>
