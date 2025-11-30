@@ -1,10 +1,7 @@
 ﻿import DarkVeil from "./components/layout/animatedBackground/DarkVeil.tsx";
-import QuantityInput from "./components/shared/QuantityInput";
-import PromptTextarea from "./components/shared/PromptTextarea.tsx";
-import ActionButton from "./components/shared/ActionButton.tsx";
 import ExpandablePlaylistBox from "./components/playlist/ExpandablePlaylistBox.tsx";
 import SortablePlaylistItem from "./components/playlist/SortablePlaylistItem.tsx";
-import Logo from "./components/shared/Logo.tsx";
+import InputSection from "./components/layout/InputSection.tsx";
 import { useState } from "react";
 import {
     DndContext,
@@ -129,25 +126,10 @@ function App() {
             </div>
 
             <div className="relative z-10 w-full h-full flex flex-col items-center justify-center gap-8 p-8">
-                <div className={`logo-container flex flex-col items-center justify-center gap-6 ${isPlaylistExpanded ? 'fade-out' : 'fade-in'}`} >
-                    <Logo />
-
-                    <div>
-                        <PromptTextarea
-                            maxLength={250}
-                            placeholder="Wprowadź prompt do utworzenia playlisty"
-                        />
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                        <QuantityInput min={1} max={10} defaultValue={1} />
-                        <span className="text-white/50 text-sm">
-                            Liczba utworów w playliście
-                        </span>
-                    </div>
-                    <ActionButton className='bg-white rounded-md ' onClick={handleCreatePlaylist}>
-                        Utwórz playlistę
-                    </ActionButton>
-                </div>
+                <InputSection
+                    isPlaylistExpanded={isPlaylistExpanded}
+                    onCreatePlaylist={handleCreatePlaylist}
+                />
                 <div className="w-full max-w-4xl">
                     <DndContext
                         sensors={sensors}
