@@ -52,6 +52,11 @@ function App() {
     };
 
     const handleDeleteItem = (id: string) => {
+        // Prevent multiple delete operations on the same item
+        if (deletingItems.has(id)) {
+            return;
+        }
+
         // Oznacz element jako usuwany (rozpocznij animację)
         setDeletingItems((prev) => new Set(prev).add(id));
 
