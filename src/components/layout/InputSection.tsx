@@ -12,7 +12,7 @@ interface InputSectionProps {
 function InputSection({ isPlaylistExpanded, onCreatePlaylist, isLoading = false }: InputSectionProps) {
     return (
         <div className={`logo-container flex flex-col items-center justify-center gap-6 ${isPlaylistExpanded ? 'fade-out' : 'fade-in'}`}>
-            <Logo className="mb-15" />
+            <Logo className="mb-16" />
 
             <div>
                 <PromptTextarea
@@ -21,7 +21,7 @@ function InputSection({ isPlaylistExpanded, onCreatePlaylist, isLoading = false 
                     width={600}
                 />
             </div>
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-2 mb-5">
                 <QuantityInput min={1} max={10} defaultValue={1} />
                 <span className="text-white/50 text-sm">
                     Liczba utworów w playliście
