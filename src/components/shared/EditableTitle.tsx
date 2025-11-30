@@ -62,8 +62,9 @@ const EditableTitle = ({
       e.preventDefault();
       inputRef.current?.blur();
     } else if (e.key === 'Escape') {
+      e.preventDefault();
       setEditedValue(value);
-      setIsEditing(false);
+      inputRef.current?.blur();
     }
   };
 
