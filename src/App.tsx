@@ -141,20 +141,22 @@ function App() {
             const randomTitle = mockTitles[Math.floor(Math.random() * mockTitles.length)];
             const randomDuration = `${Math.floor(Math.random() * 3 + 2)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`;
 
-            // Znajdź najwyższe ID i dodaj 1
-            const maxId = playlistItems.reduce((max, item) => {
-                const itemId = parseInt(item.id);
-                return itemId > max ? itemId : max;
-            }, 0);
+            // Dodaj nowy element, obliczając maxId na podstawie aktualnego stanu
+            setPlaylistItems((items) => {
+                const maxId = items.reduce((max, item) => {
+                    const itemId = parseInt(item.id);
+                    return itemId > max ? itemId : max;
+                }, 0);
 
-            const newItem: PlaylistItem = {
-                id: String(maxId + 1),
-                title: randomTitle,
-                artist: randomArtist,
-                duration: randomDuration
-            };
+                const newItem: PlaylistItem = {
+                    id: String(maxId + 1),
+                    title: randomTitle,
+                    artist: randomArtist,
+                    duration: randomDuration
+                };
 
-            setPlaylistItems((items) => [...items, newItem]);
+                return [...items, newItem];
+            });
         } catch (error) {
             console.error('Error during adding item:', error);
         } finally {
