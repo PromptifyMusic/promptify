@@ -33,6 +33,20 @@
     box-shadow: none;
   }
 
+  .app-textarea--error {
+    border-color: rgba(239, 68, 68, 0.7);
+    --glass-bg-alpha: 0.14;
+  }
+
+  .app-textarea--error:hover:not(:disabled) {
+    border-color: rgba(239, 68, 68, 0.8);
+  }
+
+  .app-textarea--error:focus {
+    border-color: rgba(239, 68, 68, 0.9);
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+  }
+
   .app-textarea::-webkit-scrollbar {
     width: 6px;
   }
@@ -55,6 +69,13 @@
   .app-textarea--with-counter {
     padding-right: 3.75rem;
     padding-bottom: 1.5rem;
+  }
+
+  .app-textarea-error-message {
+    min-height: 1.25rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
   }
 
   .app-textarea__counter {

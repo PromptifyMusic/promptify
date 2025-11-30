@@ -17,6 +17,7 @@ interface TextareaProps {
     id?: string;
     ariaLabel?: string;
     maxLength?: number;
+    hasError?: boolean;
 }
 
 const Textarea: React.FC<TextareaProps> = ({
@@ -34,6 +35,7 @@ const Textarea: React.FC<TextareaProps> = ({
     id,
     ariaLabel,
     maxLength,
+    hasError = false,
 }) => {
     const isControlled = value !== undefined;
     const [internalValue, setInternalValue] = useState<string>(defaultValue);
@@ -61,7 +63,7 @@ const Textarea: React.FC<TextareaProps> = ({
             ref={ref}
             id={id}
             name={name}
-            className={`app-textarea glass glass--inset ${className}`.trim()}
+            className={`app-textarea glass glass--inset ${hasError ? 'app-textarea--error' : ''} ${className}`.trim()}
             placeholder={placeholder}
             value={currentValue}
             onChange={handleChange}

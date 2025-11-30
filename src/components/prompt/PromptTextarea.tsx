@@ -20,6 +20,8 @@ export interface PromptTextareaProps {
   counterMode?: 'usedLimit' | 'remaining';
   warnAt?: number;
   criticalAt?: number;
+  hasError?: boolean;
+  errorMessage?: string;
 }
 
 const PromptTextarea: React.FC<PromptTextareaProps> = ({
@@ -40,6 +42,8 @@ const PromptTextarea: React.FC<PromptTextareaProps> = ({
   counterMode = 'usedLimit',
   warnAt = 0.9,
   criticalAt = 1.0,
+  hasError = false,
+  errorMessage,
 }) => {
   const isControlled = value !== undefined;
   const [mirrorValue, setMirrorValue] = useState<string>(defaultValue);
@@ -56,32 +60,46 @@ const PromptTextarea: React.FC<PromptTextareaProps> = ({
   const textareaClassName = `${className} ${showCounter ? 'app-textarea--with-counter' : ''}`.trim();
 
   return (
-    <div className="app-textarea-wrapper" style={{ width: typeof width === 'number' ? `${width}px` : width }}>
-      <Textarea
-        value={value}
-        defaultValue={defaultValue}
-        onChange={handleChange}
-        placeholder={placeholder}
-        width="100%"
-        maxHeight={maxHeight}
-        minHeight={minHeight}
-        rows={rows}
-        className={textareaClassName}
-        disabled={disabled}
-        name={name}
-        id={id}
-        ariaLabel={ariaLabel}
-        maxLength={maxLength}
-      />
-      {showCounter && (
-        <TextareaCounter
-          currentLength={currentLen}
-          maxLength={maxLength!}
-          mode={counterMode}
-          warnAt={warnAt}
-          criticalAt={criticalAt}
+    <div style={{ width: typeof width === 'number' ? `${width}px` : width }}>
+      <div className="app-textarea-wrapper">
+        <Textarea
+          value={value}
+          defaultValue={defaultValue}
+          onChange={handleChange}
+          placeholder={placeholder}
+          width="100%"
+          maxHeight={maxHeight}
+          minHeight={minHeight}
+          rows={rows}
+          className={textareaClassName}
+          disabled={disabled}
+          name={name}
+          id={id}
+          ariaLabel={ariaLabel}
+          maxLength={maxLength}
+          hasError={hasError}
         />
-      )}
+        {showCounter && (
+          <TextareaCounter
+            currentLength={currentLen}
+            maxLength={maxLength!}
+            mode={counterMode}
+            warnAt={warnAt}
+            criticalAt={criticalAt}
+          />
+        )}
+      </div>
+      <div className="app-textarea-error-message">
+        {hasError && errorMessage ? (
+          <span className="text-red-500 text-xs px-1">
+            {errorMessage}
+          </span>
+        ) : (
+          <span className="text-xs px-1 opacity-0" aria-hidden="true">
+            &nbsp;
+          </span>
+        )}
+      </div>
     </div>
   );
 };
