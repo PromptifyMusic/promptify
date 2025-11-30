@@ -10,32 +10,25 @@ function App() {
     const [isLoading, setIsLoading] = useState(false);
 
 
-    const handleCreatePlaylist = async (prompt: string, quantity: number) => {
-        // TODO: Use prompt for actual API call
+    const handleCreatePlaylist = async () => {
         setIsLoading(true);
 
         try {
             // Mock API call - 3 sekundowe opóźnienie
             await new Promise((resolve) => setTimeout(resolve, 3000));
 
-            // Generowanie mocków w zależności od quantity
-            const mockArtists = ['Artist Name 1', 'Artist Name 2', 'Artist Name 3', 'Artist Name 4', 'Artist Name 5'];
-            const mockTitles = ['Song Title', 'Track', 'Hit Song', 'Music Piece', 'Melody'];
-
-            const mockPlaylist = Array.from({ length: quantity }, (_, index) => {
-                const artistIndex = index % mockArtists.length;
-                const titleIndex = index % mockTitles.length;
-                const minutes = Math.floor(Math.random() * 3 + 2);
-                const seconds = Math.floor(Math.random() * 60).toString().padStart(2, '0');
-
-                return {
-                    id: String(index + 1),
-                    title: `${mockTitles[titleIndex]} ${index + 1}`,
-                    artist: mockArtists[artistIndex],
-                    duration: `${minutes}:${seconds}`
-                };
-            });
-
+            const mockPlaylist = [
+                { id: "1", title: "Song Title 1", artist: "Artist Name 1", duration: "3:45" },
+                { id: "2", title: "Song Title 2", artist: "Artist Name 2", duration: "4:12" },
+                { id: "3", title: "Song Title 3", artist: "Artist Name 3", duration: "3:28" },
+                { id: "4", title: "Song Title 4", artist: "Artist Name 4", duration: "5:01" },
+                { id: "5", title: "Song Title 5", artist: "Artist Name 5", duration: "3:56" },
+                { id: "6", title: "Song Title 6", artist: "Artist Name 1", duration: "3:45" },
+                { id: "7", title: "Song Title 7", artist: "Artist Name 2", duration: "4:12" },
+                { id: "8", title: "Song Title 8", artist: "Artist Name 3", duration: "3:28" },
+                { id: "9", title: "Song Title 9", artist: "Artist Name 4", duration: "5:01" },
+                { id: "10", title: "Song Title 10", artist: "Artist Name 5", duration: "3:56" },
+            ];
             setPlaylistItems(mockPlaylist);
             setIsPlaylistExpanded(true);
         } catch (error) {
