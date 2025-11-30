@@ -126,9 +126,7 @@ function App() {
                 />
             </div>
 
-            <div className={`relative z-10 w-full h-full flex flex-col items-center p-8 transition-all duration-500 ${
-                isPlaylistExpanded ? 'justify-start pt-8 gap-4' : 'justify-center gap-8'
-            }`}>
+            <div className="relative z-10 w-full h-full flex flex-col items-center justify-center gap-8 p-8">
                 <Logo isHidden={isPlaylistExpanded} />
 
                 <PromptSection
