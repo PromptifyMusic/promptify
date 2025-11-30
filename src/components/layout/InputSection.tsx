@@ -34,8 +34,8 @@ function InputSection({ isPlaylistExpanded, onCreatePlaylist, isLoading = false 
             <div className="flex flex-col items-center gap-2 mb-5">
                 <QuantityInput
                     min={1}
-                    max={10}
-                    defaultValue={1}
+                    max={50}
+                    defaultValue={15}
                     onChange={setQuantity}
                 />
                 <span className="text-white/50 text-sm">
