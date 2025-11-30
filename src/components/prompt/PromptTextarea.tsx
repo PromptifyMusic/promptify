@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
-import Textarea from './Textarea';
-import TextareaCounter from './TextareaCounter';
+import Textarea from '../shared/Textarea.tsx';
+import TextareaCounter from '../shared/TextareaCounter.tsx';
 
 export interface PromptTextareaProps {
   value?: string;

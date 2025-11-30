@@ -7,7 +7,7 @@ interface LogoProps {
   className?: string;
 }
 
-const Logo: React.FC<LogoProps> = ({ isHidden = false, className = '' }) => {
+const Logo: React.FC<LogoProps> = ({ className = '' }) => {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       <AudioLines className="w-10 h-10 text-white/90" strokeWidth={2} />

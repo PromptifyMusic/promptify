@@ -1,7 +1,7 @@
-﻿import QuantityInput from "../shared/QuantityInput";
-import PromptTextarea from "../shared/PromptTextarea";
+﻿import QuantityInput from "../prompt/QuantityInput.tsx";
+import PromptTextarea from "../prompt/PromptTextarea.tsx";
 import ActionButton from "../shared/ActionButton";
-import Logo from "../shared/Logo";
+import Logo from "./Logo.tsx";
 
 interface InputSectionProps {
     isPlaylistExpanded: boolean;
