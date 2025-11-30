@@ -67,3 +67,28 @@
 @keyframes action-button-spin {
     to { transform: rotate(360deg); }
 }
+
+.action-button--spotify {
+    background-color: #177c37;
+    color: white;
+    font-weight: 500;
+}
+
+.action-button--spotify:hover {
+    background-color: #157132;
+}
+
+.action-button--spotify:active {
+    background-color: #157132;
+}
+
+.action-button--spotify.action-button--loading {
+    background-color: #177c37;
+    opacity: 0.85;
+}
+
+.action-button--spotify .action-button__spinner {
+    border-color: rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+}
+

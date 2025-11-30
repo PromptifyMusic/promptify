@@ -1,4 +1,4 @@
-﻿import {memo} from 'react';
+﻿import {memo, useState} from 'react';
 import {
     DndContext,
     closestCenter,
@@ -18,9 +18,11 @@ import {
     restrictToVerticalAxis,
     restrictToParentElement,
 } from '@dnd-kit/modifiers';
+import { Music2 } from 'lucide-react';
 import ExpandablePlaylistBox from './ExpandablePlaylistBox.tsx';
 import SortablePlaylistItem from './SortablePlaylistItem.tsx';
 import AddPlaylistItem from './AddPlaylistItem.tsx';
+import ActionButton from '../shared/ActionButton.tsx';
 
 export interface PlaylistItem {
     id: string;
@@ -60,6 +62,8 @@ const PlaylistSection = memo(({
     onAddItem,
     onPlaylistNameChange,
 }: PlaylistSectionProps) => {
+    const [exportingToSpotify, setExportingToSpotify] = useState(false);
+
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -79,6 +83,23 @@ const PlaylistSection = memo(({
             const newIndex = playlistItems.findIndex((item) => item.id === over.id);
             const reorderedItems = arrayMove(playlistItems, oldIndex, newIndex);
             onReorderItems(reorderedItems);
+        }
+    };
+
+    const handleExportToSpotify = async () => {
+        setExportingToSpotify(true);
+        try {
+            // Mock API call - symulacja eksportu do Spotify
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            console.log('Eksportowanie playlisty do Spotify:', {
+                name: playlistName,
+                tracks: playlistItems,
+            });
+            // TODO: Implementacja faktycznego eksportu do Spotify
+        } catch (error) {
+            console.error('Błąd podczas eksportowania do Spotify:', error);
+        } finally {
+            setExportingToSpotify(false);
         }
     };
 
@@ -127,6 +148,20 @@ const PlaylistSection = memo(({
                     </SortableContext>
                 </ExpandablePlaylistBox>
             </DndContext>
+
+            {isExpanded && playlistItems.length > 0 && (
+                <div className="mt-6 flex justify-center">
+                    <ActionButton
+                        onClick={handleExportToSpotify}
+                        loading={exportingToSpotify}
+                        disabled={exportingToSpotify}
+                        className="action-button--spotify"
+                    >
+                        <Music2 size={20} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />
+                        Eksportuj do Spotify
+                    </ActionButton>
+                </div>
+            )}
         </div>
     );
 });
