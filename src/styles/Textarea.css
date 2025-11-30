@@ -71,6 +71,13 @@
     padding-bottom: 1.5rem;
   }
 
+  .app-textarea-error-message {
+    min-height: 1.25rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+  }
+
   .app-textarea__counter {
     position: absolute;
     right: 10px;
