@@ -11,6 +11,7 @@ function App() {
     const [isLoading, setIsLoading] = useState(false);
     const [initialQuantity, setInitialQuantity] = useState<number>(0);
     const [isAddingItem, setIsAddingItem] = useState(false);
+    const [playlistName, setPlaylistName] = useState<string>('Playlista');
     const deleteTimeoutsRef = useRef<Map<string, number>>(new Map());
 
 
@@ -164,6 +165,10 @@ function App() {
         }
     };
 
+    const handlePlaylistNameChange = (name: string) => {
+        setPlaylistName(name);
+    };
+
     return (
         <div className="relative w-full h-screen overflow-hidden">
             <div className="absolute inset-0 -z-10">
@@ -188,11 +193,13 @@ function App() {
                     deletingItems={deletingItems}
                     initialQuantity={initialQuantity}
                     isAddingItem={isAddingItem}
+                    playlistName={playlistName}
                     onCollapse={() => setIsPlaylistExpanded(false)}
                     onReorderItems={handleReorderItems}
                     onDeleteItem={handleDeleteItem}
                     onRegenerateItem={handleRegenerateItem}
                     onAddItem={handleAddItem}
+                    onPlaylistNameChange={handlePlaylistNameChange}
                 />
             </div>
         </div>
