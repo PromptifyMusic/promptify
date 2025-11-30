@@ -11,6 +11,7 @@ function App() {
 
 
     const handleCreatePlaylist = async (prompt: string, quantity: number) => {
+        // TODO: Use prompt for actual API call
         setIsLoading(true);
 
         try {
