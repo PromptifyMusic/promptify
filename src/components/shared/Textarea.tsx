@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
 import '../../styles/Textarea.css';
-import { useAutoResizeTextarea } from '../../hooks/useAutoResizeTextarea';
+import { useAutoResizeTextarea } from '../../hooks/useAutoResizeTextarea.ts';
 
 interface TextareaProps {
     value?: string;
