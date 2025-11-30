@@ -15,9 +15,23 @@ const DEFAULT_QUANTITY = 15;
 function InputSection({ isPlaylistExpanded, onCreatePlaylist, isLoading = false }: InputSectionProps) {
     const [prompt, setPrompt] = useState<string>("");
     const [quantity, setQuantity] = useState<number>(DEFAULT_QUANTITY);
+    const [hasError, setHasError] = useState<boolean>(false);
 
     const handleCreateClick = () => {
-        onCreatePlaylist(prompt, quantity);
+        const trimmedPrompt = prompt.trim();
+        if (!trimmedPrompt) {
+            setHasError(true);
+            return;
+        }
+        setHasError(false);
+        onCreatePlaylist(trimmedPrompt, quantity);
+    };
+
+    const handlePromptChange = (value: string) => {
+        setPrompt(value);
+        if (hasError && value.trim()) {
+            setHasError(false);
+        }
     };
 
     return (
@@ -27,10 +41,12 @@ function InputSection({ isPlaylistExpanded, onCreatePlaylist, isLoading = false 
             <div>
                 <PromptTextarea
                     value={prompt}
-                    onChange={setPrompt}
+                    onChange={handlePromptChange}
                     maxLength={250}
                     placeholder="Wprowadź prompt do utworzenia playlisty"
                     width={600}
+                    hasError={hasError}
+                    errorMessage="Proszę wprowadzić prompt"
                 />
             </div>
             <div className="flex flex-col items-center gap-2 mb-5">

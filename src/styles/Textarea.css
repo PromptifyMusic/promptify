@@ -33,6 +33,20 @@
     box-shadow: none;
   }
 
+  .app-textarea--error {
+    border-color: rgba(239, 68, 68, 0.7);
+    --glass-bg-alpha: 0.14;
+  }
+
+  .app-textarea--error:hover:not(:disabled) {
+    border-color: rgba(239, 68, 68, 0.8);
+  }
+
+  .app-textarea--error:focus {
+    border-color: rgba(239, 68, 68, 0.9);
+    ring-color: rgba(239, 68, 68, 0.5);
+  }
+
   .app-textarea::-webkit-scrollbar {
     width: 6px;
   }

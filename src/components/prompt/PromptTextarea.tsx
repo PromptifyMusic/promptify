@@ -20,6 +20,8 @@ export interface PromptTextareaProps {
   counterMode?: 'usedLimit' | 'remaining';
   warnAt?: number;
   criticalAt?: number;
+  hasError?: boolean;
+  errorMessage?: string;
 }
 
 const PromptTextarea: React.FC<PromptTextareaProps> = ({
@@ -40,6 +42,8 @@ const PromptTextarea: React.FC<PromptTextareaProps> = ({
   counterMode = 'usedLimit',
   warnAt = 0.9,
   criticalAt = 1.0,
+  hasError = false,
+  errorMessage,
 }) => {
   const isControlled = value !== undefined;
   const [mirrorValue, setMirrorValue] = useState<string>(defaultValue);
@@ -72,6 +76,7 @@ const PromptTextarea: React.FC<PromptTextareaProps> = ({
         id={id}
         ariaLabel={ariaLabel}
         maxLength={maxLength}
+        hasError={hasError}
       />
       {showCounter && (
         <TextareaCounter
@@ -81,6 +86,11 @@ const PromptTextarea: React.FC<PromptTextareaProps> = ({
           warnAt={warnAt}
           criticalAt={criticalAt}
         />
+      )}
+      {hasError && errorMessage && (
+        <div className="text-red-500 text-xs mt-1 px-1">
+          {errorMessage}
+        </div>
       )}
     </div>
   );
