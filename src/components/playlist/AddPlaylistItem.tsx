@@ -11,6 +11,8 @@ const AddPlaylistItem = memo(({ onAdd, isAdding = false }: AddPlaylistItemProps)
     <button
       onClick={onAdd}
       disabled={isAdding}
+      type="button"
+      aria-label={isAdding ? 'Dodawanie utworu...' : 'Dodaj nowy utwór do playlisty'}
       className={`group flex items-center gap-4 p-3 rounded-lg border-2 border-dashed border-white/20 hover:border-white/40 hover:bg-white/5 transition-all duration-200 cursor-pointer w-full ${
         isAdding ? 'animate-pulse bg-white/5 opacity-50' : ''
       }`}
