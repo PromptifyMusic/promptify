@@ -1,4 +1,4 @@
-﻿import { memo } from 'react';
+﻿import {memo} from 'react';
 import {
     DndContext,
     closestCenter,
@@ -18,8 +18,8 @@ import {
     restrictToVerticalAxis,
     restrictToParentElement,
 } from '@dnd-kit/modifiers';
-import ExpandablePlaylistBox from './ExpandablePlaylistBox';
-import SortablePlaylistItem from './SortablePlaylistItem';
+import ExpandablePlaylistBox from './ExpandablePlaylistBox.tsx';
+import SortablePlaylistItem from './SortablePlaylistItem.tsx';
 
 export interface PlaylistItem {
     id: string;
@@ -59,7 +59,7 @@ const PlaylistSection = memo(({
     );
 
     const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
+        const {active, over} = event;
 
         if (over && active.id !== over.id) {
             const oldIndex = playlistItems.findIndex((item) => item.id === active.id);
