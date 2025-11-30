@@ -11,12 +11,13 @@ interface InputSectionProps {
 function InputSection({ isPlaylistExpanded, onCreatePlaylist }: InputSectionProps) {
     return (
         <div className={`logo-container flex flex-col items-center justify-center gap-6 ${isPlaylistExpanded ? 'fade-out' : 'fade-in'}`}>
-            <Logo />
+            <Logo className="mb-15" />
 
             <div>
                 <PromptTextarea
                     maxLength={250}
                     placeholder="Wprowadź prompt do utworzenia playlisty"
+                    width={600}
                 />
             </div>
             <div className="flex flex-col items-center gap-2">
