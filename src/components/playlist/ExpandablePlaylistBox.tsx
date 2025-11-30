@@ -1,6 +1,7 @@
 ﻿import { ChevronUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import '../../styles/ExpandablePlaylistBox.css';
+import EditableTitle from '../shared/EditableTitle.tsx';
 
 const ANIMATION_DURATION = 500;
 
@@ -11,6 +12,8 @@ interface ExpandablePlaylistBoxProps {
   children?: React.ReactNode;
   isExpanded?: boolean;
   onCollapse?: () => void;
+  playlistName?: string;
+  onPlaylistNameChange?: (name: string) => void;
 }
 
 const ExpandablePlaylistBox = ({
@@ -20,6 +23,8 @@ const ExpandablePlaylistBox = ({
   children,
   isExpanded = false,
   onCollapse,
+  playlistName = 'Playlista',
+  onPlaylistNameChange,
 }: ExpandablePlaylistBoxProps) => {
   const [isAnimationComplete, setIsAnimationComplete] = useState(false);
 
@@ -39,6 +44,7 @@ const ExpandablePlaylistBox = ({
       onCollapse();
     }
   };
+
 
   return (
     <div
@@ -67,7 +73,13 @@ const ExpandablePlaylistBox = ({
           style={{ maxHeight, maxWidth, minWidth }}
         >
           <div className="flex items-center justify-between p-4 border-b border-white/20">
-            <h3 className="text-white text-lg font-semibold">Playlista</h3>
+            <EditableTitle
+              value={playlistName}
+              onChange={onPlaylistNameChange}
+              placeholder="Nazwa playlisty"
+              maxLength={50}
+              ariaLabel="Edytuj nazwę playlisty"
+            />
             <button
               onClick={handleCollapse}
               className="p-2 hover:bg-white/10 rounded-full transition-colors duration-200"

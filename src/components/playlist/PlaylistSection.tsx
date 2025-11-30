@@ -36,11 +36,13 @@ interface PlaylistSectionProps {
     deletingItems: Set<string>;
     initialQuantity: number;
     isAddingItem: boolean;
+    playlistName?: string;
     onCollapse: () => void;
     onReorderItems: (items: PlaylistItem[]) => void;
     onDeleteItem: (id: string) => void;
     onRegenerateItem: (id: string) => void;
     onAddItem: () => void;
+    onPlaylistNameChange?: (name: string) => void;
 }
 
 const PlaylistSection = memo(({
@@ -50,11 +52,13 @@ const PlaylistSection = memo(({
     deletingItems,
     initialQuantity,
     isAddingItem,
+    playlistName,
     onCollapse,
     onReorderItems,
     onDeleteItem,
     onRegenerateItem,
     onAddItem,
+    onPlaylistNameChange,
 }: PlaylistSectionProps) => {
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -92,6 +96,8 @@ const PlaylistSection = memo(({
                     maxHeight="600px"
                     isExpanded={isExpanded}
                     onCollapse={onCollapse}
+                    playlistName={playlistName}
+                    onPlaylistNameChange={onPlaylistNameChange}
                 >
                     <SortableContext
                         items={playlistItems.map(item => item.id)}
