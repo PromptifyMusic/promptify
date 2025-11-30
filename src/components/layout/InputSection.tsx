@@ -1,6 +1,6 @@
 ﻿import QuantityInput from "../prompt/QuantityInput.tsx";
 import PromptTextarea from "../prompt/PromptTextarea.tsx";
-import ActionButton from "../shared/ActionButton";
+import ActionButton from "../shared/ActionButton.tsx";
 import Logo from "./Logo.tsx";
 
 interface InputSectionProps {
