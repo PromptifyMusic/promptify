@@ -1,4 +1,5 @@
 # app/main.py
+import base64
 import os
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import RedirectResponse
@@ -26,14 +27,14 @@ def get_db():
     finally:
         db.close()
 
-# --- KONFIGURACJA SPOTIFY ---
+# KONFIGURACJA SPOTIFY
 # Zakres uprawnień (Scope). Musimy poprosić o prawo do edycji playlist.
 SPOTIFY_SCOPE = "playlist-modify-public playlist-modify-private"
 
 def get_spotify_oauth():
     return SpotifyOAuth(
         client_id=os.getenv("SPOTIPY_CLIENT_ID"),
-        client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
+        client_secret=os.getenv("SPOTIPY_CLIENT_SEno CRET"),
         redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI"),
         scope=SPOTIFY_SCOPE
     )
@@ -131,14 +132,38 @@ def callback_spotify(code: str):
 
 # app/main.py - dodaj na końcu
 
-@app.get("/create_playlist_hardcoded")
+
+
+
+#Tutaj musi być wsadzane id
+MOJA_LISTA_DO_PLAYLISTY = [
+    "5cqaG09jwHAyDURuZXViwC",  # ID piosenki 1
+    "4dDoIid58lgImNuYAxTRyM"# ID piosenki 2
+
+]
+PLAYLIST_NAME = "Moja Playlista z Configu"       # Nazwa
+PLAYLIST_DESC = "Opis ustawiony w zmiennej globalnej Python" # Opis
+PLAYLIST_PUBLIC = False                          # Czy publiczna? (True/False)
+
+PLAYLIST_COVER_PATH = "cover.jpg"
+
+
+# Funkcja pomocnicza (musi być w kodzie, żeby zdjęcie działało)
+def encode_image_to_base64(image_path: str):
+    try:
+        with open(image_path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode('utf-8')
+    except FileNotFoundError:
+        return None
+
+
+@app.post("/create_playlist_hardcoded")
 def create_playlist_hardcoded():
     """
-    Tworzy playlistę z listy piosenek zdefiniowanej "na sztywno" w kodzie.
-    Nie łączy się z bazą danych SQL, operuje tylko na zmiennych.
+    Wersja z zewnętrznymi zmiennymi + okładką + POPRAWNYMI WCIĘCIAMI.
     """
 
-    # 1. AUTORYZACJA
+    # A. Autoryzacja
     token_info = user_tokens.get('current_user')
     if not token_info:
         raise HTTPException(status_code=401, detail="Najpierw zaloguj się na /login")
@@ -146,45 +171,53 @@ def create_playlist_hardcoded():
     sp = spotipy.Spotify(auth=token_info['access_token'])
     user_id = sp.current_user()['id']
 
-    # WAŻNE: Wklej tutaj prawdziwe ID ze swojej bazy/Spotify!
-    my_hardcoded_songs = [
-        {
-            "name": "Piosenka Testowa 1",
-            "spotify_id": "5cqaG09jwHAyDURuZXViwC",  # <--- WKLEJ TU ID
-        },
-        {
-            "name": "Piosenka Testowa 2",
-            "spotify_id": "4dDoIid58lgImNuYAxTRyM"  # <--- WKLEJ TU ID
-        }
-    ]
+    # B. Pobranie danych ze zmiennych globalnych
+    current_ids = MOJA_LISTA_DO_PLAYLISTY
+    pl_name = PLAYLIST_NAME
+    pl_public = PLAYLIST_PUBLIC
+    pl_desc = PLAYLIST_DESC
+    cover_path = PLAYLIST_COVER_PATH
 
-    # 3. PRZETWARZANIE (PĘTLA W PAMIĘCI)
-    # Nie pytamy bazy SQL, po prostu mielimy listę, którą mamy wyżej.
+    # C. Pętla przetwarzająca ID
     spotify_uris = []
-    for song in my_hardcoded_songs:
-        sid = song["spotify_id"]
-        # Dodajemy prefix, jeśli go nie ma
+    for sid in current_ids:
         if "spotify:track:" not in sid:
             spotify_uris.append(f"spotify:track:{sid}")
         else:
             spotify_uris.append(sid)
 
-    # 4. TWORZENIE PLAYLISTY
-    if not spotify_uris:
-        return {"error": "Lista utworów jest pusta lub ma błędne ID"}
+    # ---------------------------------------------------------
+    # KLUCZOWY MOMENT: Tu kończy się pętla.
+    # Kod poniżej jest przesunięty w lewo (nie ma wcięcia).
+    # Wykona się TYLKO RAZ.
+    # ---------------------------------------------------------
 
+    # D. Tworzenie playlisty
     playlist = sp.user_playlist_create(
         user=user_id,
-        name="Playlista Na Sztywno",
-        public=False,
-        description="Stworzona z ręcznie wpisanej listy w kodzie"
+        name=pl_name,
+        public=pl_public,
+        description=pl_desc
     )
 
-    # 5. WRZUCANIE UTWORÓW
-    sp.playlist_add_items(playlist_id=playlist['id'], items=spotify_uris)
+    # E. Dodawanie zdjęcia (jeśli jest w configu)
+    cover_msg = "Brak zdjęcia"
+    if cover_path:
+        img_base64 = encode_image_to_base64(cover_path)
+        if img_base64:
+            try:
+                sp.playlist_upload_cover_image(playlist['id'], img_base64)
+                cover_msg = "Zdjęcie dodane"
+            except Exception as e:
+                cover_msg = f"Błąd zdjęcia: {e}"
+
+    # F. Wrzucanie utworów
+    if spotify_uris:
+        sp.playlist_add_items(playlist_id=playlist['id'], items=spotify_uris)
 
     return {
         "status": "Gotowe!",
         "playlist_url": playlist['external_urls']['spotify'],
+        "cover_status": cover_msg,
         "tracks_count": len(spotify_uris)
     }
