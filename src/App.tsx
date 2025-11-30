@@ -1,7 +1,7 @@
 ﻿import DarkVeil from "./components/layout/animatedBackground/DarkVeil.tsx";
 import InputSection from "./components/layout/InputSection.tsx";
 import PlaylistSection, { PlaylistItem } from "./components/playlist/PlaylistSection.tsx";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 function App() {
     const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
@@ -9,6 +9,7 @@ function App() {
     const [regeneratingItems, setRegeneratingItems] = useState<Set<string>>(new Set());
     const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(false);
+    const deleteTimeoutsRef = useRef<Map<string, number>>(new Map());
 
 
     const handleCreatePlaylist = async (prompt: string, quantity: number) => {
@@ -55,7 +56,7 @@ function App() {
         setDeletingItems((prev) => new Set(prev).add(id));
 
         // Usuń element po zakończeniu animacji (300ms)
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
             setPlaylistItems((items) => items.filter((item) => item.id !== id));
             setRegeneratingItems((prev) => {
                 const newSet = new Set(prev);
@@ -67,8 +68,21 @@ function App() {
                 newSet.delete(id);
                 return newSet;
             });
+            deleteTimeoutsRef.current.delete(id);
         }, 300);
+
+        deleteTimeoutsRef.current.set(id, timeoutId);
     };
+
+    useEffect(() => {
+        return () => {
+            // Wyczyść wszystkie aktywne timeout'y przy unmount
+            deleteTimeoutsRef.current.forEach((timeoutId) => {
+                clearTimeout(timeoutId);
+            });
+            deleteTimeoutsRef.current.clear();
+        };
+    }, []);
 
     const handleRegenerateItem = async (id: string) => {
         setRegeneratingItems((prev) => new Set(prev).add(id));
