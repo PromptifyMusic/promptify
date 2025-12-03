@@ -123,24 +123,24 @@ def callback_spotify(code: str):
     sp_oauth = get_spotify_oauth()
     token_info = sp_oauth.get_access_token(code)
 
-    # Zapisujemy token (w uproszczonym modelu globalnym)
-    # W prawdziwej aplikacji powinieneś użyć cookies lub zwrócić token do frontendu.
+    # Zapisujemy token
+    # dodać cookies (?)
     user_tokens['current_user'] = token_info
 
     return {"message": "Zalogowano pomyślnie! Możesz teraz tworzyć playlisty."}
 
 
-# app/main.py - dodaj na końcu
+
 
 
 
 
 #Tutaj musi być wsadzane id
 MOJA_LISTA_DO_PLAYLISTY = [
-    "5cqaG09jwHAyDURuZXViwC",  # ID piosenki 1
-    "4dDoIid58lgImNuYAxTRyM"# ID piosenki 2
-
+    "5cqaG09jwHAyDURuZXViwC",
+    "4dDoIid58lgImNuYAxTRyM"
 ]
+
 PLAYLIST_NAME = "Moja Playlista z Configu"       # Nazwa
 PLAYLIST_DESC = "Opis ustawiony w zmiennej globalnej Python" # Opis
 PLAYLIST_PUBLIC = False                          # Czy publiczna? (True/False)
