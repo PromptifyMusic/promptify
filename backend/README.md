@@ -2,13 +2,35 @@
 
 API backendu dla aplikacji Promptify - generowanie playlist Spotify na podstawie tagów muzycznych.
 
-## Szybki Start
+##  Szybki Start
 
 ### Wymagania
 - Python 3.10+
 - PostgreSQL (uruchomiony serwer)
 
-### Instalacja (Windows)
+### Automatyczna instalacja (ZALECANE dla Windows)
+Upewnij się, że znajdujesz się w katalogu `backend` i uruchamiasz skrypty za pomocą PowerShell:
+```powershell
+# 1. Przygotuj backend (jednorazowo)
+.\setup_backend.ps1
+
+# 2. Uruchom backend
+.\run_backend.ps1
+```
+
+**Skrypt `setup_backend.ps1` automatycznie:**
+-  Sprawdzi Python i PostgreSQL
+-  Utworzy środowisko wirtualne
+-  Zainstaluje wszystkie zależności
+-  Skonfiguruje plik .env
+-  Sprawdzi połączenie z bazą danych
+
+**Skrypt `run_backend.ps1` automatycznie:**
+-  Aktywuje środowisko wirtualne
+-  Sprawdzi PostgreSQL
+-  Uruchomi serwer FastAPI
+
+### Instalacja ręczna (Windows)
 
 ```powershell
 # 1. Przejdź do katalogu backend
@@ -185,6 +207,8 @@ backend/
 ├── .gitignore            # Wykluczenia Git
 ├── requirements.txt      # Zależności Python
 ├── populate_database.py  # Skrypt dodawania danych
+├── setup_backend.ps1     # Instalacja backendu (Windows)
+├── run_backend.ps1       # Uruchomienie backendu (Windows)
 └── README.md            # Ta dokumentacja
 ```
 
@@ -193,9 +217,9 @@ backend/
 ### Ochrona wrażliwych danych
 
 **Plik `.env` jest już chroniony:**
-- ✅ Dodany do `.gitignore` - nie będzie commitowany
-- ✅ Zawiera hasła i klucze API
-- ✅ Każdy developer ma swój lokalny plik
+-  Dodany do `.gitignore` - nie będzie commitowany
+-  Zawiera hasła i klucze API
+-  Każdy developer ma swój lokalny plik
 
 **Używaj `.env.example` jako szablonu:**
 ```powershell
