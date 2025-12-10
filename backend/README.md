@@ -69,7 +69,12 @@ CREATE TABLE spotify_tracks (
 
 ### 2. Plik `.env`
 
-Sprawdź i dostosuj konfigurację w pliku `.env`:
+**WAŻNE: Plik `.env` zawiera wrażliwe dane i NIE JEST commitowany do Git!**
+
+Skopiuj `env_example.txt` do `.env` i uzupełnij swoimi danymi:
+
+
+Następnie edytuj plik `.env` i uzupełnij:
 
 ```env
 DATABASE_URL=postgresql://postgres:TWOJE_HASLO@localhost:5432/postgres
@@ -175,11 +180,40 @@ backend/
 │   ├── models.py         # Model Song (SQLAlchemy)
 │   └── schemas.py        # Schematy Pydantic
 ├── venv/                 # Środowisko wirtualne
-├── .env                  # Konfiguracja (nie commitować!)
+├── .env                  # Konfiguracja (NIE COMMITOWAĆ!)
+├── .env.example          # Szablon konfiguracji (commitowany)
 ├── .gitignore            # Wykluczenia Git
 ├── requirements.txt      # Zależności Python
 ├── populate_database.py  # Skrypt dodawania danych
 └── README.md            # Ta dokumentacja
+```
+
+## Bezpieczeństwo
+
+### Ochrona wrażliwych danych
+
+**Plik `.env` jest już chroniony:**
+- ✅ Dodany do `.gitignore` - nie będzie commitowany
+- ✅ Zawiera hasła i klucze API
+- ✅ Każdy developer ma swój lokalny plik
+
+**Używaj `.env.example` jako szablonu:**
+```powershell
+# 1. Skopiuj szablon
+copy .env.example .env
+
+# 2. Edytuj .env i dodaj swoje klucze
+# 3. NIE COMMITUJ pliku .env do Git!
+```
+
+**Sprawdź co jest w Git:**
+```powershell
+# Sprawdź czy .env NIE jest śledzony
+git status
+
+# Jeśli przypadkowo dodałeś .env do Git:
+git rm --cached .env
+git commit -m "Remove .env from repository"
 ```
 
 
