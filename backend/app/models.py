@@ -3,7 +3,7 @@ from sqlalchemy import Column, Integer, String, Boolean, Float, JSON
 from .database import Base
 
 class Song(Base):
-    __tablename__ = "songs27"  # upewnij się, że to nazwa twojej tabeli w Postgres
+    __tablename__ = "spotify_tracks"  # Nazwa tabeli w Postgres
 
     track_id = Column(String, primary_key=True)
     name = Column(String)
