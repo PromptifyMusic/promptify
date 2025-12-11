@@ -157,7 +157,7 @@ const PlaylistSection = memo(({
                         disabled={exportingToSpotify}
                         className="action-button--spotify"
                     >
-                        <Music2 size={20} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />
+                        <Music2 size={20} className="inline-block align-middle mr-2" />
                         Eksportuj do Spotify
                     </ActionButton>
                 </div>
