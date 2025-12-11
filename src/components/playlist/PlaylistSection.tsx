@@ -21,6 +21,7 @@ import {
 import ExpandablePlaylistBox from './ExpandablePlaylistBox.tsx';
 import SortablePlaylistItem from './SortablePlaylistItem.tsx';
 import AddPlaylistItem from './AddPlaylistItem.tsx';
+import ExportToSpotifyButton from './ExportToSpotifyButton.tsx';
 
 export interface PlaylistItem {
     id: string;
@@ -60,6 +61,7 @@ const PlaylistSection = memo(({
     onAddItem,
     onPlaylistNameChange,
 }: PlaylistSectionProps) => {
+
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -81,6 +83,7 @@ const PlaylistSection = memo(({
             onReorderItems(reorderedItems);
         }
     };
+
 
     return (
         <div className="w-full max-w-4xl">
@@ -127,6 +130,13 @@ const PlaylistSection = memo(({
                     </SortableContext>
                 </ExpandablePlaylistBox>
             </DndContext>
+
+            {isExpanded && playlistItems.length > 0 && (
+                <ExportToSpotifyButton
+                    playlistName={playlistName}
+                    playlistItems={playlistItems}
+                />
+            )}
         </div>
     );
 });
