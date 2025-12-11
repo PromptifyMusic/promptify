@@ -228,44 +228,59 @@ if ($checkDb -eq "t") {
 
         # Utwórz tymczasowy plik Python
         $testScript = @"
-import os
+import os, sys, traceback
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
 # Zaladuj .env z biezacego katalogu
 load_dotenv('.env')
-try:
-    db_url = os.getenv('DATABASE_URL')
-    if not db_url:
-        print('[BLAD] DATABASE_URL nie jest ustawiony w .env')
-        exit(1)
-    engine = create_engine(db_url)
-    with engine.connect() as conn:
-        result = conn.execute(text('SELECT version();'))
-        print('[OK] Polaczenie z baza danych dziala')
-        try:
-            result = conn.execute(text('SELECT COUNT(*) FROM spotify_tracks;'))
-            count = result.fetchone()[0]
-            print(f'[OK] Tabela spotify_tracks zawiera {count} utworow')
-        except Exception as table_err:
-            print('[INFO] Tabela spotify_tracks nie istnieje - trzeba ja utworzyc')
-except Exception as e:
-    print(f'[BLAD] {str(e)[:150]}')
+
+def main():
+    try:
+        db_url = os.getenv('DATABASE_URL')
+        if not db_url:
+            print('[BLAD] DATABASE_URL nie jest ustawiony w .env', file=sys.stderr)
+            sys.exit(1)
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            result = conn.execute(text('SELECT version();'))
+            print('[OK] Polaczenie z baza danych dziala')
+            try:
+                result = conn.execute(text('SELECT COUNT(*) FROM spotify_tracks;'))
+                count = result.fetchone()[0]
+                print(f'[OK] Tabela spotify_tracks zawiera {count} utworow')
+            except Exception:
+                print('[INFO] Tabela spotify_tracks nie istnieje - trzeba ja utworzyc')
+    except Exception:
+        # Wypisz pelny traceback dla latwiejszej diagnostyki i zwroc kod bledu
+        traceback.print_exc()
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()
 "@
 
-        # Zapisz do tymczasowego pliku i wykonaj
+        # Zapisz do tymczasowego pliku i wykonaj (przechwyc output i kod wyjscia)
         $testScript | Out-File -FilePath "temp_test_db.py" -Encoding UTF8
-        python temp_test_db.py
+        $output = python temp_test_db.py 2>&1
+        $pythonExit = $LASTEXITCODE
+        Write-Host $output
         Remove-Item "temp_test_db.py" -ErrorAction SilentlyContinue
 
-        Write-Host ""
-        $populate = Read-Host "  [?] Wstawic przykladowe dane do bazy? (t/n)"
-        if ($populate -eq "t") {
-            if (Test-Path "populate_database.py") {
-                Write-Host "  [*] Wstawianie danych..." -ForegroundColor Gray
-                python populate_database.py
-            } else {
-                Write-Host "  [!] Brak pliku populate_database.py" -ForegroundColor Red
+        if ($pythonExit -ne 0) {
+            Write-Host ""
+            Write-Host "  [BLAD] Polaczenie z baza danych nie powiodlo sie" -ForegroundColor Red
+            Write-Host "  [INFO] Sprawdz DATABASE_URL w pliku .env oraz szczegoly bledu powyzej" -ForegroundColor Gray
+        } else {
+            Write-Host ""
+            $populate = Read-Host "  [?] Wstawic przykladowe dane do bazy? (t/n)"
+            if ($populate -eq "t") {
+                if (Test-Path "populate_database.py") {
+                    Write-Host "  [*] Wstawianie danych..." -ForegroundColor Gray
+                    python populate_database.py
+                } else {
+                    Write-Host "  [!] Brak pliku populate_database.py" -ForegroundColor Red
+                }
             }
         }
     } catch {
@@ -292,4 +307,3 @@ Write-Host ""
 Write-Host "Aby uruchomic backend:" -ForegroundColor Cyan
 Write-Host "  .\run_backend.ps1" -ForegroundColor Yellow
 Write-Host ""
-
