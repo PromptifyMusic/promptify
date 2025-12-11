@@ -134,15 +134,33 @@ try {
     & ".\venv\Scripts\Activate.ps1"
 
     Write-Host "  [*] Aktualizacja pip..." -ForegroundColor Gray
-    python -m pip install --upgrade pip --quiet 2>&1 | Out-Null
+    python -m pip install --upgrade pip
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [!] Ostrzezenie: Aktualizacja pip zakonczyla sie z bledami" -ForegroundColor Yellow
+    } else {
+        Write-Host "  [OK] pip zaktualizowany" -ForegroundColor Green
+    }
 
+    Write-Host ""
     Write-Host "  [*] Instalacja pakietow z requirements.txt..." -ForegroundColor Gray
-    pip install -r requirements.txt --quiet 2>&1 | Out-Null
+    Write-Host "  (moze to potrwac kilka minut...)" -ForegroundColor Gray
+    Write-Host ""
 
+    pip install -r requirements.txt
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "  [BLAD] Instalacja pakietow nie powiodla sie" -ForegroundColor Red
+        Write-Host "  [INFO] Sprawdz komunikaty powyzej aby poznac przyczyne" -ForegroundColor Gray
+        exit 1
+    }
+
+    Write-Host ""
     Write-Host "  [OK] Wszystkie zaleznosci zainstalowane" -ForegroundColor Green
 } catch {
-    Write-Host "  [BLAD] Nie udalo sie zainstalowac zaleznosci: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  [BLAD] Nie udalo sie zainstalowac zaleznosci" -ForegroundColor Red
     Write-Host "  [INFO] Sprawdz plik requirements.txt i polaczenie internetowe" -ForegroundColor Gray
+    Write-Host "  [INFO] Szczegoly bledu: $($_.Exception.Message)" -ForegroundColor Gray
     exit 1
 }
 
