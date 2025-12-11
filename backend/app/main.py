@@ -152,7 +152,14 @@ def login_spotify():
     Krok 1: Przekierowuje użytkownika do logowania w Spotify.
     """
     sp_oauth = get_spotify_oauth()
+    # Pobierz URL autoryzacji
     auth_url = sp_oauth.get_authorize_url()
+    # Dodaj parametr show_dialog=true aby wymusić wyświetlenie ekranu logowania
+    # nawet jeśli użytkownik jest już zalogowany w przeglądarce
+    if '?' in auth_url:
+        auth_url += '&show_dialog=true'
+    else:
+        auth_url += '?show_dialog=true'
     return RedirectResponse(auth_url)
 
 
