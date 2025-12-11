@@ -91,10 +91,13 @@ CREATE TABLE spotify_tracks (
 
 ### 2. Plik `.env`
 
-**WAŻNE: Plik `.env` zawiera wrażliwe dane i NIE JEST commitowany do Git!**
+** BEZPIECZEŃSTWO: Plik `.env` zawiera wrażliwe dane i NIE MOŻE BYĆ commitowany do Git!**
 
 Skopiuj `env_example.txt` do `.env` i uzupełnij swoimi danymi:
 
+```powershell
+copy env_example.txt .env
+```
 
 Następnie edytuj plik `.env` i uzupełnij:
 
@@ -111,6 +114,22 @@ SPOTIPY_REDIRECT_URI=http://127.0.0.1:8000/callback
 2. Utwórz aplikację
 3. Skopiuj Client ID i Client Secret
 4. Dodaj Redirect URI: `http://127.0.0.1:8000/callback`
+
+**Ważne pliki ignorowane przez Git:**
+- `.env` - zmienne środowiskowe i hasła
+- `.cache` - tokeny Spotify (tworzone automatycznie)
+- `venv/` - środowisko wirtualne Python
+
+**Jeśli przypadkowo commitowałeś wrażliwe pliki:**
+```powershell
+# Usuń z Git (ale zostaw lokalnie)
+git rm --cached backend/.env backend/.cache
+
+# NATYCHMIAST zrotuj credentials:
+# 1. Zmień hasło PostgreSQL
+# 2. Regeneruj klucze w Spotify Dashboard
+# 3. Zaktualizuj .env z nowymi danymi
+```
 
 ### 3. Przykładowe dane (opcjonalnie)
 
@@ -224,10 +243,8 @@ backend/
 **Używaj `.env.example` jako szablonu:**
 ```powershell
 # 1. Skopiuj szablon
-copy .env.example .env
-
 # 2. Edytuj .env i dodaj swoje klucze
-# 3. NIE COMMITUJ pliku .env do Git!
+# 3. Nie commituj pliku .env do Git!
 ```
 
 **Sprawdź co jest w Git:**
@@ -239,6 +256,3 @@ git status
 git rm --cached .env
 git commit -m "Remove .env from repository"
 ```
-
-
-
