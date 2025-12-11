@@ -1,7 +1,7 @@
 # app/main.py
 import base64
 import os
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -79,17 +79,24 @@ def root():
 
 
 @app.get("/songs/{tag_name}", response_model=list[schemas.SongBase])
-def read_songs_by_tag(tag_name: str, db: Session = Depends(get_db)):
+def read_songs_by_tag(
+        tag_name: str,
+        limit: int = Query(default=10, ge=1),
+        db: Session = Depends(get_db)
+        ):
+    # Bazowe zapytanie
+    query = db.query(models.Song).filter(
+        models.Song.tags_list.ilike(f"%{tag_name}%")
+    )
 
-    # Używamy ILIKE, żeby nie rozróżniało wielkości liter
-    songs = db.query(models.Song).filter(models.Song.tags_list.ilike(f"%{tag_name}%")).all()
-
+    songs = query.limit(limit).all()
     if not songs:
-        raise HTTPException(status_code=404, detail=f"Nie znaleziono piosenek z tagiem '{tag_name}'")
+
+        detail_msg = f"Nie znaleziono piosenek z tagiem '{tag_name}'"
+        raise HTTPException(status_code=404, detail=detail_msg)
 
     return songs
 
-##dodać zapiś do spoti
 
 
 
