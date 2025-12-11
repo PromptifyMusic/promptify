@@ -164,11 +164,23 @@ def login_spotify():
 
 
 @app.get("/callback")
-def callback_spotify(code: str):
+def callback_spotify(code: str = None, error: str = None):
     """
-    Krok 2: Spotify wraca tutaj z kodem. Wymieniamy go na token.
+    Krok 2: Spotify wraca tutaj z kodem lub błędem.
+    - Sukces: ?code=XXX
+    - Anulowanie: ?error=access_denied
     """
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+    # Użytkownik anulował autoryzację
+    if error:
+        print(f"INFO: User cancelled authorization. Error: {error}")
+        return RedirectResponse(f"{frontend_url}/?spotify_auth=cancelled")
+
+    # Brak kodu autoryzacyjnego
+    if not code:
+        print("ERROR: No code or error parameter received")
+        return RedirectResponse(f"{frontend_url}/?spotify_auth=error&reason=no_code")
 
     try:
         sp_oauth = get_spotify_oauth()
