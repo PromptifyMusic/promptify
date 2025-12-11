@@ -44,6 +44,10 @@
 
 /* Zalogowany użytkownik */
 .spotify-auth-button--logged-in {
+    /* Dziedziczy position: fixed z .spotify-auth-button */
+}
+
+.spotify-auth-button__wrapper {
     position: relative;
 }
 

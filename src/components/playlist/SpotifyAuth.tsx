@@ -33,35 +33,37 @@ const SpotifyAuth = memo(() => {
     if (isAuthenticated && user) {
         return (
             <div className="spotify-auth-button spotify-auth-button--logged-in">
-                <button
-                    className="spotify-auth-button__trigger"
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                >
-                    <User size={18} className="spotify-auth-button__icon" />
-                    <span className="spotify-auth-button__username">
-                        {user.display_name || user.id}
-                    </span>
-                    <ChevronDown
-                        size={16}
-                        className={`spotify-auth-button__chevron ${isDropdownOpen ? 'spotify-auth-button__chevron--open' : ''}`}
-                    />
-                </button>
+                <div className="spotify-auth-button__wrapper">
+                    <button
+                        className="spotify-auth-button__trigger"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
+                    >
+                        <User size={18} className="spotify-auth-button__icon" />
+                        <span className="spotify-auth-button__username">
+                            {user.display_name || user.id}
+                        </span>
+                        <ChevronDown
+                            size={16}
+                            className={`spotify-auth-button__chevron ${isDropdownOpen ? 'spotify-auth-button__chevron--open' : ''}`}
+                        />
+                    </button>
 
-                {isDropdownOpen && (
-                    <div className="spotify-auth-button__dropdown">
-                        <button
-                            className="spotify-auth-button__dropdown-item"
-                            onClick={() => {
-                                logout();
-                                setIsDropdownOpen(false);
-                            }}
-                        >
-                            <LogOut size={16} />
-                            <span>Wyloguj</span>
-                        </button>
-                    </div>
-                )}
+                    {isDropdownOpen && (
+                        <div className="spotify-auth-button__dropdown">
+                            <button
+                                className="spotify-auth-button__dropdown-item"
+                                onClick={() => {
+                                    logout();
+                                    setIsDropdownOpen(false);
+                                }}
+                            >
+                                <LogOut size={16} />
+                                <span>Wyloguj</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         );
     }
