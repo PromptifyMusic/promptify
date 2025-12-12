@@ -1,4 +1,4 @@
-﻿import { memo, useState } from 'react';
+import { memo, useState } from 'react';
 import { LogIn, LogOut, User, ChevronDown, AlertCircle } from 'lucide-react';
 import { useSpotifyAuth } from '../../hooks/useSpotifyAuth.ts';
 import '../../styles/SpotifyAuth.css';
