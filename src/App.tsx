@@ -31,6 +31,7 @@ function App() {
                 title: track.name,
                 artist: track.artist,
                 duration: formatDuration(track.duration_ms),
+                image: track.image,
             }));
 
             setPlaylistItems(playlistItems);

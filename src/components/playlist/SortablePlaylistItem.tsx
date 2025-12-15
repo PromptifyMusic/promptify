@@ -8,6 +8,7 @@ interface SortablePlaylistItemProps {
     title: string;
     artist: string;
     duration?: string;
+    image?: string | null;
     onDelete: (id: string) => void;
     onRegenerate: (id: string) => void;
     isRegenerating?: boolean;
@@ -19,6 +20,7 @@ const SortablePlaylistItem = memo(({
     title,
     artist,
     duration,
+    image,
     onDelete,
     onRegenerate,
     isRegenerating = false,
@@ -59,6 +61,7 @@ const SortablePlaylistItem = memo(({
                 title={title}
                 artist={artist}
                 duration={duration}
+                image={image}
                 onDelete={onDelete}
                 onRegenerate={onRegenerate}
                 isRegenerating={isRegenerating}

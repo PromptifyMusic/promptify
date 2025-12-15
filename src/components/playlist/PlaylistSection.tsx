@@ -28,6 +28,7 @@ export interface PlaylistItem {
     title: string;
     artist: string;
     duration: string;
+    image?: string | null;
 }
 
 interface PlaylistSectionProps {
@@ -114,6 +115,7 @@ const PlaylistSection = memo(({
                                     title={item.title}
                                     artist={item.artist}
                                     duration={item.duration}
+                                    image={item.image}
                                     onDelete={onDeleteItem}
                                     onRegenerate={onRegenerateItem}
                                     isRegenerating={regeneratingItems.has(item.id)}
