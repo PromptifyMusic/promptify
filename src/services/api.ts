@@ -3,7 +3,8 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export interface TempPlaylistTrack {
-    track_id: string;
+    track_id: string;      // ID z bazy danych (Million Song Dataset)
+    spotify_id: string;    // ID Spotify (używane do API)
     name: string;
     artist: string;
     duration_ms: number;

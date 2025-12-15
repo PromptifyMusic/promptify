@@ -25,7 +25,8 @@ import ExportToSpotifyButton from './ExportToSpotifyButton.tsx';
 
 export interface PlaylistItem {
     id: string;              // Unikalny ID elementu playlisty (React key)
-    trackId: string;         // ID utworu ze Spotify/bazy danych
+    trackId: string;         // ID utworu z bazy danych (Million Song Dataset)
+    spotifyId: string;       // ID Spotify (używane do API)
     title: string;
     artist: string;
     duration: string;

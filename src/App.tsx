@@ -31,7 +31,8 @@ function App() {
             // Mapowanie danych z backendu na format PlaylistItem
             const playlistItems: PlaylistItem[] = tracks.map((track) => ({
                 id: generatePlaylistItemId(track.track_id),  // Unikalny ID: trackId + timestamp
-                trackId: track.track_id,                     // ID utworu ze Spotify
+                trackId: track.track_id,                     // ID z bazy danych
+                spotifyId: track.spotify_id,                 // ID Spotify
                 title: track.name,
                 artist: track.artist,
                 duration: formatDuration(track.duration_ms),
@@ -96,8 +97,9 @@ function App() {
                     return items.map((item) =>
                         item.id === id
                             ? {
-                                ...item,                    // Zachowaj istniejący id
+                                ...item,                        // Zachowaj istniejący id
                                 trackId: updatedTrack.trackId,
+                                spotifyId: updatedTrack.spotifyId,
                                 title: updatedTrack.title,
                                 artist: updatedTrack.artist,
                                 duration: updatedTrack.duration,

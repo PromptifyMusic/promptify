@@ -37,7 +37,7 @@ const ExportToSpotifyButton = memo(({
             const response = await exportPlaylistToSpotify({
                 name: playlistName || 'Moja Playlista',
                 description: 'Playlista wygenerowana przez Promptify',
-                track_ids: playlistItems.map(item => item.trackId),
+                track_ids: playlistItems.map(item => item.spotifyId),  // Używamy spotifyId!
                 public: false,
             });
 

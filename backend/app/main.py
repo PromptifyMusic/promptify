@@ -176,6 +176,7 @@ def temp_playlist_generator(
 
         result.append({
             "track_id": song.track_id,
+            "spotify_id": song.spotify_id or song.track_id,  # Fallback na track_id jeśli brak spotify_id
             "name": song.name or "Unknown",
             "artist": song.artist or "Unknown Artist",
             "duration_ms": song.duration_ms or 0,
@@ -216,6 +217,7 @@ def get_random_track(db: Session = Depends(get_db)):
 
     return {
         "track_id": random_song.track_id,
+        "spotify_id": random_song.spotify_id or random_song.track_id,  # Fallback na track_id jeśli brak spotify_id
         "name": random_song.name or "Unknown",
         "artist": random_song.artist or "Unknown Artist",
         "duration_ms": random_song.duration_ms or 0,
@@ -423,11 +425,8 @@ def export_playlist_to_spotify(request: schemas.ExportPlaylistRequest):
         # Jeśli już jest w formacie spotify:track:xxx
         if track_id.startswith("spotify:track:"):
             spotify_uris.append(track_id)
-        # Jeśli to samo ID (np. TRAAADT12903CCC339)
-        elif len(track_id) > 0:
-            # Dla naszej bazy używamy track_id, które może nie być Spotify ID
-            # Musimy sprawdzić czy utwór ma spotify_id w bazie
-            # Na razie zakładamy że track_id to spotify_id
+        # Jeśli to Spotify ID (base62, długość ~22 znaki)
+        elif track_id and len(track_id) > 10:
             spotify_uris.append(f"spotify:track:{track_id}")
         else:
             invalid_ids.append(track_id)

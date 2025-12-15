@@ -52,7 +52,8 @@ class TempPlaylistRequest(BaseModel):
 
 
 class TempPlaylistTrack(BaseModel):
-    track_id: str
+    track_id: str           # ID z naszej bazy (Million Song Dataset)
+    spotify_id: str         # ID Spotify (potrzebne do API)
     name: str
     artist: str
     duration_ms: int
@@ -67,4 +68,5 @@ class ExportPlaylistRequest(BaseModel):
     description: Optional[str] = "Playlista wygenerowana przez Promptify"
     track_ids: List[str]  # Lista track_id ze Spotify (spotify_id z bazy)
     public: Optional[bool] = False
+
 

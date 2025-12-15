@@ -25,6 +25,7 @@ export const usePlaylistOperations = () => {
 
             const updatedItem = {
                 trackId: track.track_id,
+                spotifyId: track.spotify_id,
                 title: track.name,
                 artist: track.artist,
                 duration: formatDuration(track.duration_ms),
@@ -62,6 +63,7 @@ export const usePlaylistOperations = () => {
 
             const newItem = {
                 trackId: track.track_id,
+                spotifyId: track.spotify_id,
                 title: track.name,
                 artist: track.artist,
                 duration: formatDuration(track.duration_ms),
