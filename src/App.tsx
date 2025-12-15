@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import SpotifyAuth from "./components/playlist/SpotifyAuth.tsx";
 import { generateTempPlaylist, formatDuration } from "./services/api.ts";
 import { usePlaylistOperations } from "./hooks/usePlaylistOperations.ts";
+import { generatePlaylistItemId } from "./utils/generateId.ts";
 function App() {
     const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
     const [playlistItems, setPlaylistItems] = useState<PlaylistItem[]>([]);
@@ -29,7 +30,8 @@ function App() {
 
             // Mapowanie danych z backendu na format PlaylistItem
             const playlistItems: PlaylistItem[] = tracks.map((track) => ({
-                id: track.track_id,
+                id: generatePlaylistItemId(track.track_id),  // Unikalny ID: trackId + timestamp
+                trackId: track.track_id,                     // ID utworu ze Spotify
                 title: track.name,
                 artist: track.artist,
                 duration: formatDuration(track.duration_ms),
@@ -86,19 +88,34 @@ function App() {
     const handleRegenerateItem = async (id: string) => {
         await regenerateItem(
             id,
-            (updatedItem) => {
+            (updatedTrack) => {
                 setPlaylistItems((items) => {
                     if (!items.some((item) => item.id === id)) {
                         return items;
                     }
-                    return items.map((item) => (item.id === id ? updatedItem : item));
+                    return items.map((item) =>
+                        item.id === id
+                            ? {
+                                ...item,                    // Zachowaj istniejący id
+                                trackId: updatedTrack.trackId,
+                                title: updatedTrack.title,
+                                artist: updatedTrack.artist,
+                                duration: updatedTrack.duration,
+                                image: updatedTrack.image,
+                            }
+                            : item
+                    );
                 });
             }
         );
     };
 
     const handleAddItem = async () => {
-        await addItem((newItem) => {
+        await addItem((newTrack) => {
+            const newItem: PlaylistItem = {
+                ...newTrack,
+                id: generatePlaylistItemId(newTrack.trackId),  // Unikalny ID
+            };
             setPlaylistItems((items) => [...items, newItem]);
         });
     };

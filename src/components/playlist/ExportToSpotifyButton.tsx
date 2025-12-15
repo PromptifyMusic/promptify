@@ -26,11 +26,13 @@ const ExportToSpotifyButton = memo(({
         try {
             // Mock API call - symulacja eksportu do Spotify
             await new Promise((resolve) => setTimeout(resolve, 2000));
+
+            // TODO: Implementacja faktycznego eksportu do Spotify
+            // Używamy trackId - to właściwy ID utworu w Spotify
             console.log('Eksportowanie playlisty do Spotify:', {
                 name: playlistName,
-                tracks: playlistItems,
+                trackIds: playlistItems.map(item => item.trackId),
             });
-            // TODO: Implementacja faktycznego eksportu do Spotify
         } catch (error) {
             console.error('Błąd podczas eksportowania do Spotify:', error);
         } finally {

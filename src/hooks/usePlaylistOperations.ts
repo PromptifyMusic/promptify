@@ -15,7 +15,7 @@ export const usePlaylistOperations = () => {
      */
     const regenerateItem = useCallback(async (
         id: string,
-        onSuccess: (updatedItem: PlaylistItem) => void,
+        onSuccess: (updatedItem: Omit<PlaylistItem, 'id'>) => void,
         onError?: (error: Error) => void
     ) => {
         setRegeneratingItems((prev) => new Set(prev).add(id));
@@ -23,8 +23,8 @@ export const usePlaylistOperations = () => {
         try {
             const track = await getRandomTrack();
 
-            const updatedItem: PlaylistItem = {
-                id: track.track_id,
+            const updatedItem = {
+                trackId: track.track_id,
                 title: track.name,
                 artist: track.artist,
                 duration: formatDuration(track.duration_ms),
@@ -52,7 +52,7 @@ export const usePlaylistOperations = () => {
      * Dodaje nowy losowy utwór do playlisty
      */
     const addItem = useCallback(async (
-        onSuccess: (newItem: PlaylistItem) => void,
+        onSuccess: (newItem: Omit<PlaylistItem, 'id'>) => void,
         onError?: (error: Error) => void
     ) => {
         setIsAddingItem(true);
@@ -60,8 +60,8 @@ export const usePlaylistOperations = () => {
         try {
             const track = await getRandomTrack();
 
-            const newItem: PlaylistItem = {
-                id: track.track_id,
+            const newItem = {
+                trackId: track.track_id,
                 title: track.name,
                 artist: track.artist,
                 duration: formatDuration(track.duration_ms),
