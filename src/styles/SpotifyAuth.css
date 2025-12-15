@@ -1,0 +1,231 @@
+.spotify-auth-button {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 1000;
+}
+
+/* Przycisk logowania */
+.spotify-auth-button--login {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: rgba(29, 185, 84, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 24px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+}
+
+.spotify-auth-button--login:hover {
+    background: rgba(29, 185, 84, 1);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(29, 185, 84, 0.4);
+}
+
+.spotify-auth-button--login:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);
+}
+
+.spotify-auth-button__icon {
+    flex-shrink: 0;
+}
+
+.spotify-auth-button__text {
+    white-space: nowrap;
+}
+
+/* Zalogowany użytkownik */
+.spotify-auth-button--logged-in {
+    /* Dziedziczy position: fixed z .spotify-auth-button */
+}
+
+.spotify-auth-button__wrapper {
+    position: relative;
+}
+
+.spotify-auth-button__trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.spotify-auth-button__trigger:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.spotify-auth-button__username {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.spotify-auth-button__chevron {
+    transition: transform 0.2s ease;
+}
+
+.spotify-auth-button__chevron--open {
+    transform: rotate(180deg);
+}
+
+/* Dropdown */
+.spotify-auth-button__dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 180px;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    animation: dropdown-fade-in 0.2s ease;
+}
+
+@keyframes dropdown-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.spotify-auth-button__dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    text-align: left;
+}
+
+.spotify-auth-button__dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.spotify-auth-button__dropdown-item:active {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Loading spinner */
+.spotify-auth-button__spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spinner-spin 0.75s linear infinite;
+}
+
+@keyframes spinner-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Error state */
+.spotify-auth-button--error {
+    position: relative;
+    cursor: help;
+}
+
+.spotify-auth-button__error-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: rgba(220, 53, 69, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 24px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.spotify-auth-button__error-icon {
+    flex-shrink: 0;
+}
+
+.spotify-auth-button__error-text {
+    white-space: nowrap;
+}
+
+.spotify-auth-button__error-tooltip {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 300px;
+    max-width: 400px;
+    padding: 12px 16px;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(220, 53, 69, 0.5);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+    line-height: 1.5;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    z-index: 1001;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.spotify-auth-button--error:hover .spotify-auth-button__error-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Responsywność */
+@media (max-width: 640px) {
+    .spotify-auth-button {
+        top: 16px;
+        right: 16px;
+    }
+
+    .spotify-auth-button__text {
+        display: none;
+    }
+
+    .spotify-auth-button--login {
+        padding: 10px;
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        justify-content: center;
+    }
+
+    .spotify-auth-button__username {
+        max-width: 100px;
+    }
+}
+

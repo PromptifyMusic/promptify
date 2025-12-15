@@ -2,6 +2,7 @@
 import InputSection from "./components/layout/InputSection.tsx";
 import PlaylistSection, { PlaylistItem } from "./components/playlist/PlaylistSection.tsx";
 import { useState, useRef, useEffect } from "react";
+import SpotifyAuth from "./components/playlist/SpotifyAuth.tsx";
 
 function App() {
     const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
@@ -179,6 +180,8 @@ function App() {
                     resolutionScale={1}
                 />
             </div>
+
+            <SpotifyAuth />
 
             <div className="relative z-10 w-full h-full flex flex-col items-center justify-center gap-8 p-8">
                 <InputSection

@@ -2,6 +2,7 @@
 import { Music2 } from 'lucide-react';
 import ActionButton from '../shared/ActionButton.tsx';
 import { PlaylistItem } from './PlaylistSection.tsx';
+import { useSpotifyAuth } from '../../hooks/useSpotifyAuth.ts';
 
 interface ExportToSpotifyButtonProps {
     playlistName?: string;
@@ -13,8 +14,14 @@ const ExportToSpotifyButton = memo(({
     playlistItems,
 }: ExportToSpotifyButtonProps) => {
     const [exportingToSpotify, setExportingToSpotify] = useState(false);
+    const { isAuthenticated } = useSpotifyAuth();
 
     const handleExportToSpotify = async () => {
+        if (!isAuthenticated) {
+            console.warn('Użytkownik nie jest zalogowany do Spotify');
+            return;
+        }
+
         setExportingToSpotify(true);
         try {
             // Mock API call - symulacja eksportu do Spotify
@@ -36,7 +43,7 @@ const ExportToSpotifyButton = memo(({
             <ActionButton
                 onClick={handleExportToSpotify}
                 loading={exportingToSpotify}
-                disabled={exportingToSpotify}
+                disabled={!isAuthenticated || exportingToSpotify}
                 className="action-button--spotify"
             >
                 <Music2 size={20} className="inline-block align-middle mr-2" />
