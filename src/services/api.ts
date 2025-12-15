@@ -40,6 +40,33 @@ export const generateTempPlaylist = async (
 };
 
 /**
+ * Pobiera jeden losowy utwór z bazy danych
+ * Używane do regeneracji lub dodawania nowych utworów
+ */
+export const getRandomTrack = async (): Promise<TempPlaylistTrack> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/random_track`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(
+                errorData?.detail || `HTTP error! status: ${response.status}`
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error getting random track:', error);
+        throw error;
+    }
+};
+
+/**
  * Konwertuje milisekundy na format MM:SS
  */
 export const formatDuration = (durationMs: number): string => {
