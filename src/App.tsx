@@ -4,16 +4,18 @@ import PlaylistSection, { PlaylistItem } from "./components/playlist/PlaylistSec
 import { useState, useRef, useEffect } from "react";
 import SpotifyAuth from "./components/playlist/SpotifyAuth.tsx";
 import { generateTempPlaylist, formatDuration } from "./services/api.ts";
+import { usePlaylistOperations } from "./hooks/usePlaylistOperations.ts";
 function App() {
     const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
     const [playlistItems, setPlaylistItems] = useState<PlaylistItem[]>([]);
-    const [regeneratingItems, setRegeneratingItems] = useState<Set<string>>(new Set());
     const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(false);
     const [initialQuantity, setInitialQuantity] = useState<number>(0);
-    const [isAddingItem, setIsAddingItem] = useState(false);
     const [playlistName, setPlaylistName] = useState<string>('Playlista');
     const deleteTimeoutsRef = useRef<Map<string, number>>(new Map());
+
+    // Custom hook do zarządzania operacjami na playliście
+    const { regeneratingItems, isAddingItem, regenerateItem, addItem } = usePlaylistOperations();
 
 
     const handleCreatePlaylist = async (_prompt: string, quantity: number) => {
@@ -60,11 +62,6 @@ function App() {
         // Usuń element po zakończeniu animacji (300ms)
         const timeoutId = setTimeout(() => {
             setPlaylistItems((items) => items.filter((item) => item.id !== id));
-            setRegeneratingItems((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(id);
-                return newSet;
-            });
             setDeletingItems((prev) => {
                 const newSet = new Set(prev);
                 newSet.delete(id);
@@ -87,75 +84,23 @@ function App() {
     }, []);
 
     const handleRegenerateItem = async (id: string) => {
-        setRegeneratingItems((prev) => new Set(prev).add(id));
-
-        try {
-            // Mock API call - 3 sekundowe opóźnienie
-            await new Promise((resolve) => setTimeout(resolve, 3000));
-
-            // Mock nowych danych
-            const mockArtists = ['New Artist A', 'New Artist B', 'New Artist C', 'New Artist D', 'New Artist E'];
-            const mockTitles = ['Fresh Song', 'New Track', 'Another Hit', 'Different Tune', 'Random Song'];
-            const randomArtist = mockArtists[Math.floor(Math.random() * mockArtists.length)];
-            const randomTitle = mockTitles[Math.floor(Math.random() * mockTitles.length)];
-            const randomDuration = `${Math.floor(Math.random() * 3 + 2)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`;
-
-            setPlaylistItems((items) => {
-                if (!items.some((item) => item.id === id)) {
-                    return items;
-                }
-                return items.map((item) =>
-                    item.id === id
-                        ? { ...item, title: randomTitle, artist: randomArtist, duration: randomDuration }
-                        : item
-                );
-            });
-        } catch (error) {
-            console.error('Error during regeneration:', error);
-        } finally {
-            setRegeneratingItems((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(id);
-                return newSet;
-            });
-        }
+        await regenerateItem(
+            id,
+            (updatedItem) => {
+                setPlaylistItems((items) => {
+                    if (!items.some((item) => item.id === id)) {
+                        return items;
+                    }
+                    return items.map((item) => (item.id === id ? updatedItem : item));
+                });
+            }
+        );
     };
 
     const handleAddItem = async () => {
-        setIsAddingItem(true);
-
-        try {
-            // Mock API call - 3 sekundowe opóźnienie
-            await new Promise((resolve) => setTimeout(resolve, 3000));
-
-            // Mock nowego utworu
-            const mockArtists = ['Added Artist 1', 'Added Artist 2', 'Added Artist 3', 'Added Artist 4'];
-            const mockTitles = ['Added Song', 'New Addition', 'Fresh Track', 'Extra Hit'];
-            const randomArtist = mockArtists[Math.floor(Math.random() * mockArtists.length)];
-            const randomTitle = mockTitles[Math.floor(Math.random() * mockTitles.length)];
-            const randomDuration = `${Math.floor(Math.random() * 3 + 2)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`;
-
-            // Dodaj nowy element, obliczając maxId na podstawie aktualnego stanu
-            setPlaylistItems((items) => {
-                const maxId = items.reduce((max, item) => {
-                    const itemId = parseInt(item.id);
-                    return itemId > max ? itemId : max;
-                }, 0);
-
-                const newItem: PlaylistItem = {
-                    id: String(maxId + 1),
-                    title: randomTitle,
-                    artist: randomArtist,
-                    duration: randomDuration
-                };
-
-                return [...items, newItem];
-            });
-        } catch (error) {
-            console.error('Error during adding item:', error);
-        } finally {
-            setIsAddingItem(false);
-        }
+        await addItem((newItem) => {
+            setPlaylistItems((items) => [...items, newItem]);
+        });
     };
 
     const handlePlaylistNameChange = (name: string) => {
