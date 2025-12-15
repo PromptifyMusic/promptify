@@ -45,3 +45,18 @@ class PlaylistCreateRequest(BaseModel):
     name: str
     description: Optional[str] = "Playlista stworzona przez Songs API"
     song_ids: List[str]  # To będą track_id z Twojej bazy danych
+
+
+class TempPlaylistRequest(BaseModel):
+    quantity: int
+
+
+class TempPlaylistTrack(BaseModel):
+    track_id: str
+    name: str
+    artist: str
+    duration_ms: int
+    image: Optional[str] = None
+
+    class Config:
+        orm_mode = True

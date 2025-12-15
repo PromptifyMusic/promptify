@@ -131,6 +131,60 @@ def read_songs(
     return songs
 
 
+@app.post("/temp_playlist_generator", response_model=list[schemas.TempPlaylistTrack])
+def temp_playlist_generator(
+    request: schemas.TempPlaylistRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Losuje podaną liczbę utworów z bazy danych.
+    Zwraca tylko podstawowe informacje: track_id, name, artist, duration_ms, image.
+    """
+    from sqlalchemy.sql.expression import func
+
+    # Walidacja ilości
+    if request.quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be greater than 0")
+
+    if request.quantity > 1000:
+        raise HTTPException(status_code=400, detail="Quantity cannot exceed 1000")
+
+    # Losowanie utworów z bazy
+    random_songs = db.query(models.Song).order_by(func.random()).limit(request.quantity).all()
+
+    if not random_songs:
+        raise HTTPException(status_code=404, detail="No songs found in database")
+
+    # Mapowanie na uproszczony format
+    result = []
+    for song in random_songs:
+        # Wyciągnij URL pierwszego zdjęcia z album_images jeśli istnieje
+        image_url = None
+        if song.album_images:
+            try:
+                # album_images może być stringiem JSON lub listą
+                import json
+                if isinstance(song.album_images, str):
+                    images = json.loads(song.album_images)
+                else:
+                    images = song.album_images
+
+                if images and len(images) > 0:
+                    image_url = images[0].get('url')
+            except:
+                pass
+
+        result.append({
+            "track_id": song.track_id,
+            "name": song.name or "Unknown",
+            "artist": song.artist or "Unknown Artist",
+            "duration_ms": song.duration_ms or 0,
+            "image": image_url
+        })
+
+    return result
+
+
 ##-------------------------SPOTIFY CONFIG-------------------------
 
 @app.get("/spotify/config/check")
