@@ -3,7 +3,7 @@ import InputSection from "./components/layout/InputSection.tsx";
 import PlaylistSection, { PlaylistItem } from "./components/playlist/PlaylistSection.tsx";
 import { useState, useRef, useEffect } from "react";
 import SpotifyAuth from "./components/playlist/SpotifyAuth.tsx";
-
+import { generateTempPlaylist, formatDuration } from "./services/api.ts";
 function App() {
     const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
     const [playlistItems, setPlaylistItems] = useState<PlaylistItem[]>([]);
@@ -16,37 +16,28 @@ function App() {
     const deleteTimeoutsRef = useRef<Map<string, number>>(new Map());
 
 
-    const handleCreatePlaylist = async (prompt: string, quantity: number) => {
-        // TODO: Use prompt for actual API call
+    const handleCreatePlaylist = async (_prompt: string, quantity: number) => {
+        // TODO: Use prompt for actual API call (future implementation)
         setIsLoading(true);
         setInitialQuantity(quantity);
 
         try {
-            // Mock API call - 3 sekundowe opóźnienie
-            await new Promise((resolve) => setTimeout(resolve, 3000));
+            // Wywołanie prawdziwego API backendu
+            const tracks = await generateTempPlaylist(quantity);
 
-            // Generowanie mocków w zależności od quantity
-            const mockArtists = ['Artist Name 1', 'Artist Name 2', 'Artist Name 3', 'Artist Name 4', 'Artist Name 5'];
-            const mockTitles = ['Song Title', 'Track', 'Hit Song', 'Music Piece', 'Melody'];
+            // Mapowanie danych z backendu na format PlaylistItem
+            const playlistItems: PlaylistItem[] = tracks.map((track) => ({
+                id: track.track_id,
+                title: track.name,
+                artist: track.artist,
+                duration: formatDuration(track.duration_ms),
+            }));
 
-            const mockPlaylist = Array.from({ length: quantity }, (_, index) => {
-                const artistIndex = index % mockArtists.length;
-                const titleIndex = index % mockTitles.length;
-                const minutes = Math.floor(Math.random() * 3 + 2);
-                const seconds = Math.floor(Math.random() * 60).toString().padStart(2, '0');
-
-                return {
-                    id: String(index + 1),
-                    title: `${mockTitles[titleIndex]} ${index + 1}`,
-                    artist: mockArtists[artistIndex],
-                    duration: `${minutes}:${seconds}`
-                };
-            });
-
-            setPlaylistItems(mockPlaylist);
+            setPlaylistItems(playlistItems);
             setIsPlaylistExpanded(true);
         } catch (error) {
             console.error('Error during playlist creation:', error);
+            alert('Błąd podczas tworzenia playlisty. Sprawdź konsolę lub połączenie z backendem.');
         } finally {
             setIsLoading(false);
         }
