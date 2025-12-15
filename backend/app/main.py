@@ -185,6 +185,44 @@ def temp_playlist_generator(
     return result
 
 
+@app.get("/random_track", response_model=schemas.TempPlaylistTrack)
+def get_random_track(db: Session = Depends(get_db)):
+    """
+    Losuje jeden losowy utwór z bazy danych.
+    Używane do regeneracji pojedynczego utworu lub dodawania nowego.
+    """
+    from sqlalchemy.sql.expression import func
+
+    # Losowanie jednego utworu z bazy
+    random_song = db.query(models.Song).order_by(func.random()).first()
+
+    if not random_song:
+        raise HTTPException(status_code=404, detail="No songs found in database")
+
+    # Wyciągnij URL pierwszego zdjęcia z album_images jeśli istnieje
+    image_url = None
+    if random_song.album_images:
+        try:
+            import json
+            if isinstance(random_song.album_images, str):
+                images = json.loads(random_song.album_images)
+            else:
+                images = random_song.album_images
+
+            if images and len(images) > 0:
+                image_url = images[0].get('url')
+        except:
+            pass
+
+    return {
+        "track_id": random_song.track_id,
+        "name": random_song.name or "Unknown",
+        "artist": random_song.artist or "Unknown Artist",
+        "duration_ms": random_song.duration_ms or 0,
+        "image": image_url
+    }
+
+
 ##-------------------------SPOTIFY CONFIG-------------------------
 
 @app.get("/spotify/config/check")
