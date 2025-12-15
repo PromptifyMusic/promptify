@@ -373,9 +373,109 @@ def logout_spotify():
     return {"message": "Wylogowano pomyślnie"}
 
 
+@app.post("/export_playlist")
+def export_playlist_to_spotify(request: schemas.ExportPlaylistRequest):
+    """
+    Eksportuje playlistę z frontendu do konta Spotify zalogowanego użytkownika.
 
+    Request Body:
+    - name: Nazwa playlisty
+    - description: Opis playlisty (opcjonalny)
+    - track_ids: Lista spotify_id utworów (format: TRAAADT12903CCC339 lub spotify:track:xxx)
+    - public: Czy playlista ma być publiczna (domyślnie False)
+    """
 
+    # A. Autoryzacja
+    token_info = user_tokens.get('current_user')
+    if not token_info:
+        raise HTTPException(
+            status_code=401,
+            detail="Użytkownik nie jest zalogowany. Zaloguj się przez /login"
+        )
 
+    try:
+        sp = spotipy.Spotify(auth=token_info['access_token'])
+        user_id = sp.current_user()['id']
+    except Exception as e:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Błąd autoryzacji Spotify: {str(e)}"
+        )
+
+    # B. Walidacja danych
+    if not request.track_ids or len(request.track_ids) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Lista utworów nie może być pusta"
+        )
+
+    if len(request.track_ids) > 10000:
+        raise HTTPException(
+            status_code=400,
+            detail="Maksymalna liczba utworów w playliście to 10000"
+        )
+
+    # C. Konwersja track_ids na Spotify URIs
+    spotify_uris = []
+    invalid_ids = []
+
+    for track_id in request.track_ids:
+        # Jeśli już jest w formacie spotify:track:xxx
+        if track_id.startswith("spotify:track:"):
+            spotify_uris.append(track_id)
+        # Jeśli to samo ID (np. TRAAADT12903CCC339)
+        elif len(track_id) > 0:
+            # Dla naszej bazy używamy track_id, które może nie być Spotify ID
+            # Musimy sprawdzić czy utwór ma spotify_id w bazie
+            # Na razie zakładamy że track_id to spotify_id
+            spotify_uris.append(f"spotify:track:{track_id}")
+        else:
+            invalid_ids.append(track_id)
+
+    if invalid_ids:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Nieprawidłowe ID utworów: {invalid_ids[:10]}"
+        )
+
+    # D. Tworzenie playlisty w Spotify
+    try:
+        playlist = sp.user_playlist_create(
+            user=user_id,
+            name=request.name,
+            public=request.public,
+            description=request.description
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Błąd podczas tworzenia playlisty: {str(e)}"
+        )
+
+    # E. Dodawanie utworów do playlisty
+    # Spotify API pozwala dodać maksymalnie 100 utworów na raz
+    try:
+        batch_size = 100
+        for i in range(0, len(spotify_uris), batch_size):
+            batch = spotify_uris[i:i + batch_size]
+            sp.playlist_add_items(playlist_id=playlist['id'], items=batch)
+    except Exception as e:
+        # Playlista została utworzona, ale nie udało się dodać utworów
+        raise HTTPException(
+            status_code=500,
+            detail=f"Playlista utworzona, ale błąd przy dodawaniu utworów: {str(e)}"
+        )
+
+    # F. Zwróć informacje o utworzonej playliście
+    return {
+        "status": "success",
+        "message": "Playlista pomyślnie wyeksportowana do Spotify",
+        "playlist_id": playlist['id'],
+        "playlist_url": playlist['external_urls']['spotify'],
+        "playlist_name": request.name,
+        "tracks_count": len(spotify_uris),
+        "public": request.public
+    }
 
 
 #Tutaj musi być wsadzane id

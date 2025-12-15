@@ -60,3 +60,11 @@ class TempPlaylistTrack(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class ExportPlaylistRequest(BaseModel):
+    name: str
+    description: Optional[str] = "Playlista wygenerowana przez Promptify"
+    track_ids: List[str]  # Lista track_id ze Spotify (spotify_id z bazy)
+    public: Optional[bool] = False
+
