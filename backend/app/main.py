@@ -934,65 +934,106 @@ def get_query_tag_weights(
 def score_songs_by_tags(
     query_tag_weights: dict[str, float],
     inv_index: dict[str, np.ndarray],
-    song_tag_count: np.ndarray,
+    n_songs: int,
     idf_map: dict[str, float],
-    cfg: dict,
+    use_idf: bool = True,
+    query_pow: float = 1.0,
 ) -> np.ndarray:
     """
-    Liczy score dla wszystkich utworów na podstawie:
-    - wag tagów z promptu,
-    - odwróconego indeksu (tag -> lista indeksów utworów),
-    - opcjonalnie IDF i normalizacji długości.
+    Liczy dopasowanie (score) wszystkich utworów w bazie do tagów z zapytania.
+    Działa w oparciu o szybki odwrócony indeks (Inverted Index).
 
-    Zwraca: wektor shape [n_songs], wartości w ~[0,1].
+    Algorytm sumuje wagi tagów znalezionych w piosence, opcjonalnie mnożąc je przez IDF
+    (rzadkość tagu), a na końcu normalizuje wynik do zakresu 0.0 - 1.0.
+
+    Args:
+        query_tag_weights (dict[str, float]): Znormalizowane wagi tagów wyciągnięte z promptu.
+            Klucz: nazwa tagu (np. 'rock'), Wartość: waga (np. 0.6).
+        inv_index (dict[str, np.ndarray]): Odwrócony indeks bazy utworów.
+            Klucz: nazwa tagu. Wartość: tablica indeksów (ID) piosenek, które mają ten tag.
+            Umożliwia błyskawiczne wyszukiwanie bez iteracji po wszystkich piosenkach.
+        song_tag_count (np.ndarray): Wektor o długości równej liczbie piosenek w bazie (`n_songs`).
+            Służy tutaj do określenia wymiaru wektora wyników.
+        idf_map (dict[str, float]): Mapa Inverse Document Frequency.
+            Klucz: tag. Wartość: współczynnik rzadkości.
+            Rzadkie tagi (np. 'harfa') mają wyższe IDF niż częste (np. 'pop'),
+            co pozwala premiować unikalne dopasowania.
+        use_idf (bool, optional): Czy uwzględniać rzadkość tagów przy scoringu.
+            Domyślnie True. Zalecane, aby unikać faworyzowania bardzo popularnych gatunków.
+        query_pow (float, optional): Wykładnik potęgi do wyostrzania wag z promptu.
+            - 1.0: brak zmian (liniowo).
+            - > 1.0 (np. 2.0): Zwiększa przepaść między ważnymi a mało ważnymi tagami z zapytania.
+            Domyślnie 1.0.
+
+    Returns:
+        np.ndarray: Wektor o kształcie `(n_songs,)` z wartościami float w zakresie [0.0, 1.0].
+            Indeks w wektorze odpowiada indeksowi piosenki w `df_songs`.
     """
-    n_songs = song_tag_count.shape[0]
 
-    use_idf        = cfg.get("use_idf", True)
-    k1             = cfg.get("k1", 1.2)
-    b              = cfg.get("b", 0.75)
-    len_norm       = cfg.get("len_norm", True)
-    query_pow      = cfg.get("query_pow", 1.0)
-    normalize_tags = cfg.get("normalize_by_tags", False)
-
-    # 1) wyostrz wagi zapytania, jeśli chcesz
+    # Przetworzenie wag zapytania
     qtw = {}
+
+    # Zmienna do trzymania maksymalnego możliwego wyniku
+    max_theoretical_score = 0.0
+
     for t, w in query_tag_weights.items():
-        w2 = w ** query_pow
-        qtw[t] = w2
+        w_processed = w ** query_pow
 
-    s = sum(qtw.values())
-    if s > 0:
-        for t in qtw:
-            qtw[t] /= s
-
-    # 2) coverage po odwróconym indeksie
-    scores = np.zeros(n_songs, dtype=np.float32)
-    for tag, w in qtw.items():
-        if tag not in inv_index:
-            continue
-        weight = w
+        # Pobieramy IDF dla tego taga
+        this_idf = 1.0
         if use_idf and idf_map is not None:
-            weight *= float(idf_map.get(tag, 1.0))
-        idxs = inv_index[tag]
-        scores[idxs] += weight
+            this_idf = float(idf_map.get(t, 1.0))
 
-    # 3) BM25-like normalizacja po długości listy tagów
-    if len_norm:
-        avg_len = float(song_tag_count.mean())
-        avg_len = max(avg_len, 1e-6)
-        denom = k1 * ((1.0 - b) + b * (song_tag_count / avg_len)) + 1.0
-        scores = scores * ((k1 + 1.0) / denom)
+        # Zapisujemy finalną wagę punktową dla tego taga
+        final_weight = w_processed * this_idf
 
-    # 4) alternatywna normalizacja: / sqrt(n_tags)
-    if normalize_tags:
-        scores = scores / np.sqrt(np.maximum(1.0, song_tag_count))
+        qtw[t] = final_weight
+
+        # Dodajemy do mianownika: Idealna piosenka miałaby wszystkie te tagi
+        max_theoretical_score += final_weight
+
+    # Inicjalizacja wektora wyników
+    scores = np.zeros(n_songs, dtype=np.float32)
+
+    # Sumowanie punktów (Coverage)
+    if max_theoretical_score > 0:
+        for tag, weight in qtw.items():
+            if tag not in inv_index:
+                continue
+
+            idxs = inv_index[tag]
+            scores[idxs] += weight
+
+        # normalizacja
+        scores /= max_theoretical_score
 
     return np.clip(scores, 0.0, 1.0)
 
 
+def build_idf_map(inv_index: dict[str, np.ndarray], n_songs: int) -> dict[str, float]:
+    """
+    Tworzy mapę IDF (Inverse Document Frequency) dla wszystkich tagów.
 
+    Wzór: IDF = log(N / df)
+    Gdzie:
+      - N: całkowita liczba piosenek
+      - df: liczba piosenek zawierających dany tag
 
+    Tagi rzadkie (np. 'dark ambient') dostaną wysoki wynik (np. 3.5).
+    Tagi pospolite (np. 'pop') dostaną niski wynik (np. 0.2).
+    """
+    idf_map = {}
+
+    for tag, song_indices in inv_index.items():
+        # df (Document Frequency) - w ilu piosenkach występuje ten tag
+        df = len(song_indices)
+
+        if df > 0:
+            # Używamy logarytmu, żeby spłaszczyć wyniki
+            idf_score = np.log10(n_songs / df)
+            idf_map[tag] = float(idf_score)
+
+    return idf_map
 
 
 def retrieve_candidates_tags(
@@ -1003,7 +1044,7 @@ def retrieve_candidates_tags(
     # bierzemy tylko te, które w ogóle coś dopasowały
     pos_mask = scores_songs_tag > 0.0
     if not np.any(pos_mask):
-        return df_songs.iloc[0:0].copy(), q_tw
+        return df_songs.iloc[0:0].copy()
 
     pos_idxs = np.where(pos_mask)[0]
     # sortujemy wszystkie dopasowane po score malejąco
@@ -1080,32 +1121,19 @@ def calculate_audio_match(candidates_df, audio_criteria):
 
 
 
+def merge_tag_and_audio_scores(df, audio_weight=0.3, use_tags=True):
+    df = df.copy()
+    # Jeśli nie ma tagów, waga Audio to 100% (1.0), inaczej bierzemy z configu
+    w = audio_weight if use_tags else 1.0
 
-def merge_tag_and_audio_scores(
-    candidates_df: pd.DataFrame,
-    audio_weight: float = 0.3
-) -> pd.DataFrame:
-    """
-    Łączy wyniki z tagów i audio bezpośrednio w kolumnę 'score'.
-    Obie kolumny wejściowe muszą być w zakresie [0, 1].
-    """
-    df = candidates_df.copy()
+    # Liczymy score (safe get zabezpiecza przed brakiem kolumn)
+    df['score'] = (df.get('tag_score', 0) * (1 - w)) + (df.get('audio_score', 0) * w)
 
-    # Sprawdzenie czy mamy wyniki audio
-    if 'audio_score' not in df.columns:
-        # Brak audio -> Score to po prostu wynik tagowy
-        df['score'] = df['tag_score']
-    else:
-        # Hybryda: Średnia ważona
-        # Tag Score (0-1) * (1 - w)  +  Audio Score (0-1) * w
-        tag_part = df['tag_score'] * (1.0 - audio_weight)
-        audio_part = df['audio_score'] * audio_weight
+    # Uzupełniamy braki zerami tylko dla estetyki wyświetlania
+    for col in ['tag_score', 'audio_score']:
+        if col not in df: df[col] = 0.0
 
-        df['score'] = tag_part + audio_part
-
-    # Sortowanie
     return df.sort_values('score', ascending=False)
-
 
 
 def tier_by_score(candidates: pd.DataFrame, t_high: float, t_mid: float):
@@ -1454,38 +1482,47 @@ def search_by_text(
 
     tags_queries = e5_queries_separated['tags_to_match']
     audio_features_queries = e5_queries_separated['audio_features']
-    phrases_to_features
     # 3. FAZA 2: WYSZUKIWANIE TAGOWE (BM25-like Scoring)
     # ------------------------------------------------------------------
-    criteria_tags = map_phrases_to_tags(
-        tags_queries,
-        model=model_e5,
-        tag_vecs=TAG_VECS,
-        tags_list=TAGS,
-        threshold=0.70
-    )
+    criteria_tags = map_phrases_to_tags(tags_queries, model=model_e5, tag_vecs=TAG_VECS, tags_list=TAGS, threshold=0.70)
 
-    if not criteria_tags:
-        raise HTTPException(status_code=404,
-                            detail="Nie znaleziono tagów pasujących do bazy utworów (próg mapowania 0.7).")
+
+
 
     query_tag_weights = get_query_tag_weights(criteria_tags)
+
+    n_songs = len(df_songs)
+    IDF_MAP = build_idf_map(INV_INDEX, n_songs)
+
+    idf_list = list(IDF_MAP.items())
+    sorted_by_idf = sorted(idf_list, key=lambda item: item[1], reverse=True)
 
     scores_songs_tag = score_songs_by_tags(
         query_tag_weights=query_tag_weights,
         inv_index=INV_INDEX,
-        song_tag_count=df_songs["tag_count"].to_numpy(dtype=np.float32),
+        n_songs=len(df_songs),
         idf_map=None,
-        cfg=TAG_SCORING_CONFIG,
+        use_idf=TAG_SCORING_CONFIG['use_idf'],
+        query_pow=TAG_SCORING_CONFIG['query_pow']
     )
+
+    criteria_audio = phrases_to_features(audio_features_queries, lang_code=lang_code)
 
     # 4. POBIERANIE KANDYDATÓW
     candidates_df = retrieve_candidates_tags(scores_songs_tag)
     print(candidates_df["track_id"].count())
-    candidates_df.sample(3)
 
-    if candidates_df.empty:
-        raise HTTPException(status_code=404, detail="Brak kandydatów po filtrze tagowym.")
+    has_tags = not candidates_df.empty
+    if not has_tags and criteria_audio:
+        print("Brak wyników z tagów.")
+        candidades_df = df_songs.copy()
+    elif has_tags:
+        print(f"Znaleziono {len(candidates_df)} kandydatów po tagach.")
+    else:
+        print("Pusto (brak tagów i brak audio).")
+
+    if not candidades_df.empty and criteria_audio:
+        candidades_df['audio_score'] = calculate_audio_match(candidades_df, criteria_audio)
 
     # 5. FAZA 3: OCENA AUDIO I MERGE
     # ------------------------------------------------------------------
@@ -1495,12 +1532,11 @@ def search_by_text(
         confidence_threshold=0.78
     )
 
-    audio_match_vector = calculate_audio_match(candidates_df, criteria_audio)
-    candidates_df['audio_score'] = audio_match_vector
-    candidates_df[['artist', 'name', 'tag_score', 'audio_score']].sample(3)
+    audio_match_vector = calculate_audio_match(candidades_df, criteria_audio)
+    candidades_df['audio_score'] = audio_match_vector
 
-    candidades_merged_score_df = merge_tag_and_audio_scores(candidates_df, audio_weight=0.6)
-    candidades_merged_score_df[['artist', 'name', 'tag_score', 'audio_score', 'score']].head(20)
+    candidades_merged_score_df = merge_tag_and_audio_scores(candidades_df, audio_weight=0.6, use_tags=has_tags)
+
 
     # 6. FAZA 4: TIEROWANIE I MIKSER
     # ------------------------------------------------------------------
