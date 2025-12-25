@@ -42,3 +42,6 @@ env/
 backend/.cache
 backend/.cache-*
 
+
+backend/app/data/*.parquet
+

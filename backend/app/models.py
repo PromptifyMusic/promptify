@@ -1,7 +1,8 @@
 # app/models.py
 from sqlalchemy import Column, Integer, String, Boolean, Float, Text, ForeignKey, Table
 from sqlalchemy.orm import relationship, declarative_base
-
+#from database import Base   #nowe
+from pgvector.sqlalchemy import Vector  # Import zostaje
 
 Base = declarative_base()
 
@@ -21,6 +22,7 @@ class Tag(Base):
 
     tag_id = Column(Integer, primary_key=True)
     name = Column(String)
+    tag_embedding = Column(Vector(768))
 
     songs = relationship("Song", secondary=song_tag_association, back_populates="tags")
 

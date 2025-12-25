@@ -1149,7 +1149,7 @@ def tier_by_score(candidates: pd.DataFrame, t_high: float, t_mid: float):
         t_high (float): Próg dla wysokiego dopasowania.
         t_mid (float): Próg dla średniego dopasowania.
 
-    Returns:
+    Returns
         tuple: (tier_a, tier_b, tier_c) — trzy DataFramey z podziałem wg jakości.
     """
     tier_a = candidates[candidates["score"] >= t_high].copy()
@@ -1444,7 +1444,7 @@ import numpy as np
 
 
 
-@app.get("/search/{text}", response_model=List[str])
+@app.get("/search/{text}", response_model=List[schemas.SongResult])
 def search_by_text(
         # Zmieniono nazwę endpointu na bardziej standardową
         text: str = Path(..., min_length=1, max_length=500), # Używamy Path, a nie Query!
@@ -1515,14 +1515,14 @@ def search_by_text(
     has_tags = not candidates_df.empty
     if not has_tags and criteria_audio:
         print("Brak wyników z tagów.")
-        candidades_df = df_songs.copy()
+        candidates_df = df_songs.copy()
     elif has_tags:
         print(f"Znaleziono {len(candidates_df)} kandydatów po tagach.")
     else:
         print("Pusto (brak tagów i brak audio).")
 
-    if not candidades_df.empty and criteria_audio:
-        candidades_df['audio_score'] = calculate_audio_match(candidades_df, criteria_audio)
+    if not candidates_df.empty and criteria_audio:
+        candidates_df['audio_score'] = calculate_audio_match(candidates_df, criteria_audio)
 
     # 5. FAZA 3: OCENA AUDIO I MERGE
     # ------------------------------------------------------------------
@@ -1532,10 +1532,10 @@ def search_by_text(
         confidence_threshold=0.78
     )
 
-    audio_match_vector = calculate_audio_match(candidades_df, criteria_audio)
-    candidades_df['audio_score'] = audio_match_vector
+    audio_match_vector = calculate_audio_match(candidates_df, criteria_audio)
+    candidates_df['audio_score'] = audio_match_vector
 
-    candidades_merged_score_df = merge_tag_and_audio_scores(candidades_df, audio_weight=0.6, use_tags=has_tags)
+    candidades_merged_score_df = merge_tag_and_audio_scores(candidates_df, audio_weight=0.6, use_tags=has_tags)
 
 
     # 6. FAZA 4: TIEROWANIE I MIKSER
@@ -1565,14 +1565,33 @@ def search_by_text(
         SAMPLING_CONFIG
     )
 
+    columns_to_return = [
+        'spotify_id', 'name', 'artist',
+        'popularity', 'score', 'album_images', 'duration_ms'
+    ]
+
+    if final_playlist_df.empty:
+        raise HTTPException(status_code=404, detail="Nie udało się wygenerować playlisty. Wynikowy zbiór jest pusty.")
+
+    # Konwertujemy DataFrame do listy słowników, zawierającej tylko wymagane kolumny
+    try:
+        # Uwaga: Musisz mieć te kolumny w final_playlist_df!
+        results = final_playlist_df[columns_to_return].to_dict(orient='records')
+    except KeyError as e:
+        raise HTTPException(status_code=500, detail=f"Brak wymaganej kolumny w DataFrame: {e}. Sprawdź pliki Parquet.")
+
+    # FastAPI automatycznie mapuje listę słowników na List[SongResult]
+    return results
+
     # 8. ZWROT WYNIKÓW (ID Spotify)
+    '''
     final_ids = final_playlist_df["spotify_id"].tolist()
 
     if not final_ids:
         raise HTTPException(status_code=404, detail="Nie udało się wygenerować playlisty. Wynikowy zbiór jest pusty.")
 
     return final_ids
-
+    '''
 
 
 

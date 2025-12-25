@@ -8,3 +8,9 @@ pgvector
 sqlalchemy-utils
 pandas # Do wczytywania pliku Parquet
 pyarrow # Do odczytu plików Parquet
+spacy
+gliner
+sentence-transformers
+scikit-learn
+langdetect
+--extra-index-url https://download.pytorch.org/whl/cpu

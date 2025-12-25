@@ -54,5 +54,14 @@ class PlaylistCreateRequest(BaseModel):
 
 
 
+class SongResult(BaseModel):
+    name: str
+    artist: Optional[str] = None
+    spotify_id: Optional[str] = None
+    album_images: Optional[str] = None
+    duration_ms: Optional[int] = None
 
     #dla estetyki zmiuenic potem schemat na mniejszy
+    class Config:
+        # Pozwala Pydanticowi na odczyt pól bezpośrednio z obiektu/DataFrame
+        from_attributes = True
