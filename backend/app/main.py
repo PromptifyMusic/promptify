@@ -32,7 +32,7 @@ load_dotenv()
 
 app = FastAPI(title="Songs API")
 
-# Konfiguracja CORS
+#Konfiguracja CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -40,12 +40,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+#modele
 model_e5 = SentenceTransformer('intfloat/multilingual-e5-base')
 model_gliner = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
-##Skrypty Klaudii
 
-# 1. KONFIGURACJA EKSTRAKCJI I DOPASOWANIA (NLP / E5 / GLiNER)
+#1. KONFIGURACJA EKSTRAKCJI I DOPASOWANIA (NLP / E5 / GLiNER)
 EXTRACTION_CONFIG = {
     "gliner_threshold": 0.3, # Próg pewności dla GLiNERa (klasyfikacja: czy to tag, czy audio?)
     "tag_similarity_threshold": 0.65, # Próg podobieństwa cosinusowego dla mapowania frazy na Tag w bazie (E5)
@@ -536,14 +535,14 @@ FEATURE_DESCRIPTIONS = {
     ],
 
     # 'noise': [
-    #     # Rzeczowniki (generyczne słowa)
-    #     (None, "music song track playlist list recording audio sound genre style vibe type kind number piece"),
+ # Rzeczowniki (generyczne słowa)
+    #  (None, "music song track playlist list recording audio sound genre style vibe type kind number piece"),
 
-    #     # Czasowniki (związane z szukaniem)
-    #     (None, "I am looking for I want I need search find play listen to give me recommend show me"),
+    ## Czasowniki (związane z szukaniem)
+    # (None, "I am looking for I want I need search find play listen to give me recommend show me"),
 
-    #     # Przymiotniki (fillery bez konkretnej treści)
-    #     (None, "good very good nice great best cool amazing awesome some any kind of such a")
+    #   # Przymiotniki (fillery bez konkretnej treści)
+    #  (None, "good very good nice great best cool amazing awesome some any kind of such a")
     # ]
 }
 
@@ -923,18 +922,15 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
 def search_tags_in_db(phrases: list[str], db: Session, model, threshold=None):
     """
     Wyszukuje semantycznie podobne tagi w bazie danych przy użyciu wektorów (embeddings).
-
     Funkcja zamienia podane frazy tekstowe na wektory liczbowe przy użyciu modelu AI,
     a następnie wykonuje zapytanie SQL (pgvector), aby znaleźć najbliższe pasujące tagi
     w tabeli `tags_unique`.
-
     Args:
         phrases (list[str]): Lista fraz tekstowych do wyszukania (np. ['szybki rock', 'do biegania']).
         db (Session): Aktywna sesja bazy danych SQLAlchemy.
         model (SentenceTransformer): Załadowany model embeddingów (musi posiadać metodę .encode).
         threshold (float, optional): Minimalny próg podobieństwa (0.0 - 1.0).
                                      Jeśli None, pobierana jest wartość z konfiguracji.
-
     Returns:
         dict[str, float]: Słownik, gdzie kluczem jest nazwa znalezionego tagu,
                           a wartością stopień podobieństwa (similarity score).
@@ -987,13 +983,10 @@ def search_tags_in_db(phrases: list[str], db: Session, model, threshold=None):
 def get_query_tag_weights(raw_tags):
     """
     Normalizuje wagi tagów tak, aby ich suma wynosiła 1.0.
-
     Służy do przygotowania zbalansowanego profilu zapytania, gdzie tagi o wyższym
     raw score mają większy wpływ, ale całość jest skalowana do jedności.
-
     Args:
         raw_tags (dict[str, float]): Słownik z surowymi wynikami podobieństwa {tag: score}.
-
     Returns:
         dict[str, float]: Słownik z tymi samymi kluczami, ale znormalizowanymi wartościami.
     """
@@ -1005,17 +998,14 @@ def get_query_tag_weights(raw_tags):
 def fetch_candidates_from_db(tag_scores: dict[str, float], db: Session, limit: int = None) -> pd.DataFrame:
     """
     Pobiera z bazy danych utwory pasujące do znalezionych tagów i konwertuje je na DataFrame.
-
     Jeśli lista tagów jest pusta, funkcja wykonuje 'fallback' i pobiera najpopularniejsze
     utwory z bazy. Dla każdego pobranego utworu obliczany jest wstępny `tag_score`
     na podstawie wag przekazanych w `tag_scores`.
-
     Args:
         tag_scores (dict[str, float]): Słownik wag tagów {nazwa_tagu: waga}.
         db (Session): Aktywna sesja bazy danych.
         limit (int, optional): Maksymalna liczba utworów do pobrania.
                                Domyślnie bierze z RETRIEVAL_CONFIG.
-
     Returns:
         pd.DataFrame: Tabela z kandydatami zawierająca kolumny m.in.:
                       spotify_id, name, artist, popularity, audio features, tag_score.
