@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    #image: postgres:17
+    image: pgvector/pgvector:pg17
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: haslo123
+      POSTGRES_DB: postgres
+    volumes:
+      - ./init-db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: music_backend_ml
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Łączymy się z serwisem 'db'
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/postgres
+      - SPOTIPY_CLIENT_ID=${SPOTIFY_ID}
+      - SPOTIPY_CLIENT_SECRET=${SPOTIFY_SECRET}
+      - SPOTIPY_REDIRECT_URI=http://localhost:8000/callback
+      - FRONTEND_URL=http://localhost:5173
+    volumes:
+      - ./backend:/app
+    command: >
+      sh -c "echo 'Czekam na init.sql...' && sleep 30 && 
+             python update_tag_vectors.py && 
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+volumes:
+  postgres_data:
