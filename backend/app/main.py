@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from fastapi import FastAPI, Depends, HTTPException, Query, Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session, joinedload, load_only
+from sqlalchemy.orm import Session
 from . import models, schemas
 SongModel = models.Song
 TagModel = models.Tag
@@ -1820,9 +1820,21 @@ def login_spotify():
 @app.get("/callback")
 def callback_spotify(code: str):
     """
-    Krok 2: Spotify wraca tutaj z kodem. Wymieniamy go na token.
+    Krok 2: Spotify wraca tutaj z kodem lub błędem.
+    - Sukces: ?code=XXX
+    - Anulowanie: ?error=access_denied
     """
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+    # Użytkownik anulował autoryzację
+    if error:
+        print(f"INFO: User cancelled authorization. Error: {error}")
+        return RedirectResponse(f"{frontend_url}/?spotify_auth=cancelled")
+
+    # Brak kodu autoryzacyjnego
+    if not code:
+        print("ERROR: No code or error parameter received")
+        return RedirectResponse(f"{frontend_url}/?spotify_auth=error&reason=no_code")
 
     try:
         sp_oauth = get_spotify_oauth()
@@ -1894,6 +1906,7 @@ def check_auth_status():
         error_message = str(e)
         print(f"Error getting user info: {error_message}")
 
+        # Jeśli błąd 403, to prawdopodobnie użytkownik nie jest dodany w Spotify Dashboard
         if "403" in error_message or "not be registered" in error_message:
             user_tokens.pop('current_user', None)
             return {
@@ -1968,6 +1981,11 @@ def create_playlist_hardcoded():
         else:
             spotify_uris.append(sid)
 
+    # ---------------------------------------------------------
+    # KLUCZOWY MOMENT: Tu kończy się pętla.
+    # Kod poniżej jest przesunięty w lewo (nie ma wcięcia).
+    # Wykona się TYLKO RAZ.
+    # ---------------------------------------------------------
 
 
     #Tworzenie playlisty

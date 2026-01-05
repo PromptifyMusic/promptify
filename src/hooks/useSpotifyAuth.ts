@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
@@ -54,6 +54,12 @@ export const useSpotifyAuth = () => {
             window.history.replaceState({}, '', window.location.pathname);
             // Odśwież status autoryzacji
             checkAuthStatus();
+        } else if (authStatus === 'cancelled') {
+            // Użytkownik anulował autoryzację
+            console.log('[useSpotifyAuth] Autoryzacja została anulowana przez użytkownika');
+            setErrorMessage(null); // Nie pokazuj błędu, to była świadoma decyzja użytkownika
+            // Usuń parametry z URL
+            window.history.replaceState({}, '', window.location.pathname);
         } else if (authStatus === 'error') {
             const reason = params.get('reason');
             let message = 'Wystąpił błąd podczas autoryzacji Spotify.';
@@ -67,6 +73,9 @@ export const useSpotifyAuth = () => {
                     break;
                 case 'token_failed':
                     message = 'Nie udało się uzyskać tokena dostępu od Spotify. Spróbuj ponownie.';
+                    break;
+                case 'no_code':
+                    message = 'Nie otrzymano kodu autoryzacyjnego od Spotify. Spróbuj ponownie.';
                     break;
                 default:
                     message = 'Nieznany błąd podczas autoryzacji. Sprawdź logi backendu.';
