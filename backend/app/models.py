@@ -3,9 +3,7 @@ from sqlalchemy import Column, Integer, String, Boolean, Float, Text, ForeignKey
 from sqlalchemy.orm import relationship, declarative_base
 #from database import Base   #nowe
 from pgvector.sqlalchemy import Vector  # Import zostaje
-
-Base = declarative_base()
-
+from .database import Base
 
 
 # ...
@@ -37,7 +35,6 @@ class Song(Base):
     name = Column(String)
     artist = Column(String)
     album_name = Column(String)
-    genre = Column(String)
     year = Column(Integer)
     popularity = Column(Integer)
     explicit = Column(String)

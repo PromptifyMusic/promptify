@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session, joinedload, load_only
 from . import models, schemas
 SongModel = models.Song
 TagModel = models.Tag
-SongSchema = schemas.SongMasterBase # Używamy nowego schematu
 from .database import SessionLocal, engine
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
@@ -52,7 +51,7 @@ EXTRACTION_CONFIG = {
 }
 
 GENERIC_LEMMAS = [
-    "music", "song", "track", "playlist", "list", "recording", "audio", "sound", "genre", "style", "vibe", "type", "kind", "number", "piece",
+    "music", "song", "track", "playlist", "list", "recording", "audio", "sound", "style", "vibe", "type", "kind", "number", "piece",
     "muzyka", "piosenka", "utwór", "kawałek", "lista", "nagranie", "dźwięk", "gatunek", "styl", "klimat", "typ", "rodzaj"
 ]
 
@@ -447,7 +446,6 @@ def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.3):
             "category": matched_category,
             "route": matched_route
         })
-
     return results
 
 
@@ -485,23 +483,23 @@ FEATURE_DESCRIPTIONS = {
         ((0.0, 0.25), "very low danceability, not danceable, abstract or experimental, weak or irregular rhythm music - nie do tańca, nietaneczna, nieregularny rytm, abstrakcyjna, bez rytmu"),
         ((0.25, 0.4), "low danceability, little groove, minimal rhythm, not primarily for dancing music - mało taneczna, słaby rytm, raczej do słuchania niż tańczenia"),
         # ((0.50, 0.70), "medium danceability, some groove, steady rhythm music"),
-        ((0.70, 0.85), "high danceability, clear beat, strong groove, good for dancing, club-oriented music - taneczna, do tańca, klubowa, dobry rytm, bujająca"),
-        ((0.85, 1.0), "very high danceability, strong groove, infectious rhythm, perfect for dancing, party, club banger music - bardzo taneczna, imprezowa, parkietowa, porywająca do tańca, wixa")
+        ((0.80, 0.90), "high danceability, clear beat, strong groove, good for dancing, club-oriented music - taneczna, do tańca, klubowa, dobry rytm, bujająca"),
+        ((0.90, 1.0), "very high danceability, strong groove, infectious rhythm, perfect for dancing, party, club banger music - bardzo taneczna, imprezowa, parkietowa, porywająca do tańca, wixa")
     ],
 
     'acousticness': [
-        ((0.0, 0.20), "very low acousticness, fully electronic, synthetic, digital, computer-generated sound music - w pełni elektroniczna, syntetyczna, cyfrowa, syntezatory, techno brzmienie"),
-        ((0.20, 0.45), "low acousticness, mostly electronic with some subtle organic or acoustic elements music - głównie elektroniczna, nowoczesne brzmienie"),
+        ((0.0, 0.05), "very low acousticness, fully electronic, synthetic, digital, computer-generated sound music - w pełni elektroniczna, syntetyczna, cyfrowa, syntezatory, techno brzmienie"),
+        ((0.05, 0.25), "low acousticness, mostly electronic with some subtle organic or acoustic elements music - głównie elektroniczna, nowoczesne brzmienie"),
         # ((0.45, 0.65), "medium acousticness, balanced mix of acoustic and electronic instruments, hybrid sound music"),
         ((0.65, 0.85), "high acousticness, mostly acoustic, organic, live instruments such as accoustic guitar or piano music - akustyczna, naturalna, żywe instrumenty, gitara, pianino"),
         ((0.85, 1.0), "very high acousticness, fully acoustic, unplugged, natural, organic instruments only music - w pełni akustyczna, bez prądu, unplugged, naturalne brzmienie")
     ],
 
     'n_tempo': [
-        ((0.0, 0.20), "very slow tempo, very slow pace, dragging rhythm music - bardzo wolne tempo, bardzo wolna, ślimacze tempo, ciągnąca się"),
-        ((0.20, 0.45), "slow tempo, downtempo, slow pace, relaxed rhythm music - wolne tempo, wolna, spokojny rytm, powolna"),
+        ((0.0, 0.30), "very slow tempo, very slow pace, dragging rhythm music - bardzo wolne tempo, bardzo wolna, ślimacze tempo, ciągnąca się"),
+        ((0.30, 0.45), "slow tempo, downtempo, slow pace, relaxed rhythm music - wolne tempo, wolna, spokojny rytm, powolna"),
         ((0.45, 0.7), "medium tempo, moderate pace, walking pace music - średnie tempo, umiarkowana szybkość, normalne tempo"),
-        ((0.80, 0.90), "fast tempo, uptempo, quick pace, energetic rhythm music - szybkie tempo, szybka, żwawa, energiczny rytm"),
+        ((0.70, 0.90), "fast tempo, uptempo, quick pace, energetic rhythm music - szybkie tempo, szybka, żwawa, energiczny rytm"),
         ((0.90, 1.0), "very fast tempo, rapid pace, racing rhythm, frantic speed music - bardzo szybkie tempo, bardzo szybka, pędząca, zawrotna prędkość")
     ],
 
@@ -514,38 +512,37 @@ FEATURE_DESCRIPTIONS = {
     'energy': [
         ((0.0, 0.25), "very low energy, motionless, static, sleep-inducing, minimal activity music - bardzo niska energia, statyczna, usypiająca, bez energii, leniwa"),
         ((0.25, 0.45), "low energy, relaxed, laid-back, mellow, slow-moving atmosphere music - niska energia, zrelaksowana, luźna, spokojna, chillout"),
-        ((0.45, 0.65), "medium energy, moderate pace, steady rhythm, balanced activity music - średnia energia, umiarkowana, zrównoważona"),
-        ((0.65, 0.85), "high energy, active, driving rhythm, fast-paced, stimulating, busy arrangement music - wysoka energia, energetyczna, żywa, pobudzająca, mocna"),
-        ((0.85, 1.0), "very high energy, hyperactive, restless, frantic, adrenaline-pumping, non-stop action music - bardzo wysoka energia, wybuchowa, szalona, adrenalina, ogień, pompa")
+        ((0.45, 0.70), "medium energy, moderate pace, steady rhythm, balanced activity music - średnia energia, umiarkowana, zrównoważona"),
+        ((0.70, 0.90), "high energy, active, driving rhythm, fast-paced, stimulating, busy arrangement music - wysoka energia, energetyczna, żywa, pobudzająca, mocna"),
+        ((0.90, 1.0), "very high energy, hyperactive, restless, frantic, adrenaline-pumping, non-stop action music - bardzo wysoka energia, wybuchowa, szalona, adrenalina, ogień, pompa")
     ],
 
     'n_loudness': [
         ((0.0, 0.25), "very low loudness, barely audible, near silence, whisper-like volume, extremely quiet music - bardzo cicha, ledwo słyszalna, szept, cisza"),
-        ((0.25, 0.45), "low loudness, soft volume, background level, reduced amplitude, delicate sound music - cicha, delikatna, w tle, miękkie brzmienie"),
-        ((0.45, 0.70), "medium loudness, standard volume, normal mastering level music - normalna głośność, standardowa"),
-        ((0.70, 0.85), "high loudness, loud volume, amplified sound, noisy, high amplitude music - głośna, hałaśliwa, mocne brzmienie"),
-        ((0.85, 1.0), "very high loudness, maximum volume, deafening, high decibels music - bardzo głośna, ogłuszająca, maksymalna głośność, huk")
+        ((0.25, 0.50), "low loudness, soft volume, background level, reduced amplitude, delicate sound music - cicha, delikatna, w tle, miękkie brzmienie"),
+        ((0.50, 0.75), "medium loudness, standard volume, normal mastering level music - normalna głośność, standardowa"),
+        ((0.75, 0.90), "high loudness, loud volume, amplified sound, noisy, high amplitude music - głośna, hałaśliwa, mocne brzmienie"),
+        ((0.90, 1.0), "very high loudness, maximum volume, deafening, high decibels music - bardzo głośna, ogłuszająca, maksymalna głośność, huk")
     ],
 
     'speechiness': [
         # Speechiness > 0.66 to zazwyczaj podcasty, 0.33-0.66 to rap, < 0.33 to muzyka
-        ((0.0, 0.33), "very low speechiness, purely musical track, no spoken words, fully melodic music - muzyka, melodia, śpiew, mało gadania"),
-        ((0.33, 0.55), "low speechiness, mostly music with occasional spoken words or short background phrases - muzyka ze wstawkami mowy, rap, hip-hop"),
-        ((0.55, 1.0), "medium to high speechiness, balanced mix of speech and music, frequent spoken segments, rap-like or talky structure - dużo gadania, mowa, wywiad, audiobook, podcast, recytacja"),
+        ((0.0, 0.22), "very low speechiness, purely musical track, no spoken words, fully melodic music - muzyka, melodia, śpiew, mało gadania"),
+        ((0.22, 0.66), "low speechiness, mostly music with occasional spoken words or short background phrases - muzyka ze wstawkami mowy, rap, hip-hop"),
+        ((0.66, 1.0), "medium to high speechiness, balanced mix of speech and music, frequent spoken segments, rap-like or talky structure - dużo gadania, mowa, wywiad, audiobook, podcast, recytacja"),
     ],
 
     # 'noise': [
- # Rzeczowniki (generyczne słowa)
-    #  (None, "music song track playlist list recording audio sound genre style vibe type kind number piece"),
+    #     # Rzeczowniki (generyczne słowa)
+    #     (None, "music song track playlist list recording audio sound genre style vibe type kind number piece"),
 
-    ## Czasowniki (związane z szukaniem)
-    # (None, "I am looking for I want I need search find play listen to give me recommend show me"),
+    #     # Czasowniki (związane z szukaniem)
+    #     (None, "I am looking for I want I need search find play listen to give me recommend show me"),
 
-    #   # Przymiotniki (fillery bez konkretnej treści)
-    #  (None, "good very good nice great best cool amazing awesome some any kind of such a")
+    #     # Przymiotniki (fillery bez konkretnej treści)
+    #     (None, "good very good nice great best cool amazing awesome some any kind of such a")
     # ]
 }
-
 
 
 
@@ -567,7 +564,7 @@ ACTIVITY_GROUPS = {
             ('instrumentalness', (0.8, 1.0)),
             ('speechiness', (0.0, 0.2)),
             ('energy', (0.1, 0.5)),
-            ('n_loudness', (0.3, 0.6))
+            ('n_loudness', (0.0, 0.6))
         ]
     },
 
@@ -649,7 +646,7 @@ ACTIVITY_GROUPS = {
         ],
         'rules': [
             ('danceability', (0.8, 1.0)),
-            ('energy', (0.7, 1.0)),
+            ('energy', (0.8, 1.0)),
             ('valence', (0.6, 1.0)),
             ('n_loudness', (0.7, 1.0))
         ]
@@ -911,6 +908,14 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
             if feat in merged:
                   print(f"nadpisywanie '{feat}': (Score: {score:.2f})")
             merged[feat] = {'value': val, 'confidence': float(score)}
+
+    print("\n[AUDIO MATCH] Zmapowane cechy audio:", flush=True)
+    if not merged:
+        print("   -> Brak (używam domyślnych/random)", flush=True)
+    else:
+        for k, v in merged.items():
+            print(f"   -> {k}: {v['value']} (Pewność: {v['confidence']:.2f})", flush=True)
+
 
     return sorted([(k, v) for k, v in merged.items()], key=lambda x: x[1]['confidence'], reverse=True)
 
@@ -1425,12 +1430,19 @@ def sample_final_songs(
     final_n = sampling_cfg.get("final_n", 15)
     alpha   = sampling_cfg.get("alpha", 2.0) # Siła wpływu score na losowanie
 
+    # Gdy chcemy mało piosenek, po prostu zwracamy losowe kilka bez podziału na buckety
+    if final_n < 3:
+        return weighted_sample(working, final_n, alpha)
+
+
     p_high = popularity_cfg.get("p_high", 70)
     p_mid  = popularity_cfg.get("p_mid", 35)
     mix    = popularity_cfg.get("mix", {"high": 0.4, "mid": 0.35, "low": 0.25})
 
     forced_popular         = popularity_cfg.get("forced_popular", 0)
     forced_popular_min     = popularity_cfg.get("forced_popular_min", p_high)
+
+
 
     # 1. Bucketowanie po popularności
     pop_high, pop_mid, pop_low = bucket_by_popularity(working, p_high=p_high, p_mid=p_mid)
@@ -1453,6 +1465,12 @@ def sample_final_songs(
     pop_high = pop_high[~pop_high.index.isin(used_idx)]
     pop_mid  = pop_mid[~pop_mid.index.isin(used_idx)]
     pop_low  = pop_low[~pop_low.index.isin(used_idx)]
+
+    print(f"\n[SAMPLE] Buckety przed losowaniem:", flush=True)
+    print(f"   -> High Pop (>={p_high}): {len(pop_high)} utworów", flush=True)
+    print(f"   -> Mid Pop  (>={p_mid}):  {len(pop_mid)} utworów", flush=True)
+    print(f"   -> Low Pop  (<{p_mid}):   {len(pop_low)} utworów", flush=True)
+
 
     # 3. Obliczamy ile slotów zostało do wypełnienia
     n_forced = len(forced_taken)
@@ -1506,7 +1524,7 @@ def sample_final_songs(
 
 
 # ==========================================
-# ENDPOINT API (WERSJA NA PARAMETRACH)
+# ENDPOINT API
 # ==========================================
 # Dependency
 def get_db():
@@ -1516,23 +1534,124 @@ def get_db():
     finally:
         db.close()
 
-@app.post("/search")
+
+
+
+#usunac genre kolumna
+
+
+@app.post("/search/replace", response_model=schemas.SongResult)
+def replace_song_endpoint(
+        request: schemas.ReplaceSongRequest,
+        db: Session = Depends(get_db)
+):
+    """
+    input: request (ReplaceSongRequest) - JSON z promptem, odrzuconym ID i listą obecnych ID
+    output: dict - pojedyncza  piosenka (najlepszy dostępny zastępca)
+    """
+
+    prompt = request.text
+    # Budujemy zbiór ID, których nie chcemy
+    exclude_ids = set(request.current_playlist_ids)
+    exclude_ids.add(request.rejected_song_id)
+
+    print(f"\n[REPLACE] Start wymiany dla: '{request.rejected_song_id}'", flush=True)
+
+    # --- 1. RE-USE LOGIKI WYSZUKIWANIA ---
+
+    # NLP
+    extracted_phrases = extract_relevant_phrases(prompt)
+    tags_queries = extracted_phrases
+    audio_queries = extracted_phrases
+
+    # SQL Search (Tagi)
+    found_tags_map = search_tags_in_db(tags_queries, db, model_e5,
+                                       threshold=0.45)  # Lekko niższy próg dla bezpieczeństwa
+    query_tag_weights = get_query_tag_weights(found_tags_map)
+
+    # DB Fetch
+    candidates_df = fetch_candidates_from_db(query_tag_weights, db, limit=50)
+
+    # Fallback (gdyby nic nie znalazł po tagach)
+    if candidates_df.empty:
+        print("[REPLACE]", flush=True)
+        candidates_df = fetch_candidates_from_db({}, db, limit=50)
+
+    # Audio Match
+    criteria_audio = phrases_to_features(audio_queries,SEARCH_INDICES ,lang_code="pl")
+
+    audio_scores = calculate_audio_match(candidates_df, criteria_audio)
+    candidates_df['audio_score'] = audio_scores
+
+    # Merge & Final Score
+    has_tags = bool(found_tags_map)
+    # [POPRAWKA] Wpisano wagę na sztywno (0.6), zamiast szukać w configu
+    merged_df = merge_tag_and_audio_scores(candidates_df, audio_weight=0.6, use_tags=has_tags)
+
+    # --- 2. FILTROWANIE (Znalezienie zastępcy) ---
+
+    # Sortujemy od najlepszego dopasowania
+    sorted_candidates = merged_df.sort_values("score", ascending=False)
+
+    replacement_song = None
+
+    for index, row in sorted_candidates.iterrows():
+        s_id = row['spotify_id']
+
+        # Sprawdzamy czy to ID jest na czarnej liście
+        if s_id not in exclude_ids:
+            replacement_song = row
+            print(f"[REPLACE] Znaleziono zastępstwo: '{row['name']}' (Score: {row['score']:.4f})", flush=True)
+            break
+
+    if replacement_song is None:
+        print("[REPLACE] Nie znaleziono ", flush=True)
+        raise HTTPException(status_code=404, detail="Nie znaleziono więcej pasujących utworów do wymiany.")
+
+    # --- 3. PRZYGOTOWANIE WYNIKU ---
+
+    # [POPRAWKA] Usunięto 'spotify_preview_url', żeby nie wywalało błędu
+    result_cols = [
+        "spotify_id", "name", "artist", "popularity", "score",
+        "album_images", "duration_ms"
+    ]
+
+    # Konwersja (replace NaN na None dla poprawnego JSONa)
+    result_dict = replacement_song[result_cols].replace({np.nan: None}).to_dict()
+
+    return result_dict
+
+
+@app.post("/search", response_model=List[schemas.SongResult])
 def search_songs(
-        # Tutaj definiujemy parametry zapytania (Query Params)
+# Tutaj definiujemy parametry zapytania (Query Params)
         text: str = Query(..., description="Prompt"),
         ilosc: int = Query(15, alias="top_n", ge=1, le=50),
         # Wstrzykujemy sesję bazy danych (KLUCZOWE dla nowej wersji)
         db: Session = Depends(get_db)):
-    """
-    Główny endpoint wyszukiwania.
-    Użycie: POST /search?text=szybki rock&ilosc=15
-    """
 
+    """
+        Wejście:
+            - text (str): Tekst zapytania użytkownika (prompt, np. "szybki rock do biegania").
+            - ilosc (int): Oczekiwana długość playlisty (domyślnie 15).
+            - db (Session): Aktywna sesja połączenia z bazą danych.
+
+        Wyjście:
+            - List[dict]: Lista słowników JSON, gdzie każdy element to sformatowany utwór zawierający m.in. id, nazwę, artystę, okładkę i wynik dopasowania (score).
+
+        Opis:
+            Główny orkiestrator silnika rekomendacji. Realizuje pełny pipeline przetwarzania:
+            1. Ekstrakcja fraz kluczowych z tekstu.
+            2. Znalezienie pasujących tagów w bazie wektorowej.
+            3. Pobranie wstępnej listy kandydatów z bazy SQL.
+            4. Obliczenie dopasowania audio i połączenie go z wynikiem tagów (hybrydowa punktacja).
+            5. Podział wyników na poziomy jakości  i finalne, ważone losowanie utworów z uwzględnieniem ich popularności.
+      """
     # Przypisanie zmiennych z parametrów
     prompt = text
     final_n = ilosc
 
-    print(f"\n=== NOWE ZAPYTANIE: '{prompt}' (Top {final_n}) ===")
+    print(f"\nNOWE ZAPYTANIE: '{prompt}' (Top {final_n})")
 
 
     # 1. NLP & EMBEDDINGS
@@ -1549,7 +1668,7 @@ def search_songs(
 
     # Fallback
     if candidates_df.empty:
-        print(" ! Brak wyników po tagach. Pobieranie losowych popularnych.")
+        print("Brak wyników po tagach. Pobieranie losowych popularnych.")
         candidates_df = fetch_candidates_from_db({}, db, limit=100)
 
     # 4. AUDIO MATCH
@@ -1614,6 +1733,18 @@ def search_songs(
 # Zakres uprawnień (Scope). Musimy poprosić o prawo do edycji playlist.
 SPOTIFY_SCOPE = "playlist-modify-public playlist-modify-private"
 
+
+
+
+@app.get("/")
+def root():
+    return {"message": "Api  działa"}
+
+
+
+
+##-------------------------SPOTIFY CONFIG-------------------------
+
 def get_spotify_oauth():
     '''
     input: None (korzysta ze zmiennych środowiskowych: CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
@@ -1647,80 +1778,13 @@ def get_spotify_oauth():
 user_tokens = {}
 
 
-@app.get("/songs/all", response_model=list[SongSchema])
-def read_songs_all(limit: int = 1000, offset: int = 0, db: Session = Depends(get_db)):
-    # Dodajemy joinedload do wydajnego pobierania relacji
-    songs = db.query(SongModel).options(joinedload(SongModel.tags)).limit(limit).offset(offset).all()
-    return songs
-
-
-@app.get("/")
-def root():
-    return {"message": "Api  działa"}
-
-
-
-
-# Zmień: @app.get("/songs/{tag_name}", response_model=list[schemas.SongBase])
-@app.get("/songs/{tag_name}", response_model=list[SongSchema])
-def read_songs_by_tag(
-        tag_name: str,
-        limit: int = Query(default=10, ge=1),
-        db: Session = Depends(get_db)
-        ):
-    # Używamy JOIN do tabeli TagModel
-    query = db.query(SongModel).join(SongModel.tags).filter(
-        TagModel.name == tag_name.lower()
-    )
-
-    # Optymalizacja
-    query = query.options(joinedload(SongModel.tags))
-
-    songs = query.limit(limit).all()
-    if not songs:
-        detail_msg = f"Nie znaleziono piosenek z tagiem '{tag_name}'"
-        raise HTTPException(status_code=404, detail=detail_msg)
-
-    return songs
-
-
-
-## //w parametrze ilosc, - tego na razie nie
-## wiele argumentów.
-## Doker z,
-## podmienianie jednego utworu
-## filtr po parametrach
-## dodanie dockera
-## dodanie rzeczy na gita
-
-
-@app.get("/songs", response_model=list[SongSchema])
-def read_songs(
-    q: str | None = None,   # <--- ogólny filtr
-    limit: int = 100,
-    offset: int = 0,
-    db: Session = Depends(get_db)
-):
-    query = db.query(models.Song)
-
-    if q:
-        query = query.filter(
-            models.Song.name.ilike(f"%{q}%") |
-            models.Song.artist.ilike(f"%{q}%") |
-            models.Song.tags_list.ilike(f"%{q}%")
-        )
-
-    songs = query.limit(limit).offset(offset).all()
-    return songs
-
-
-##-------------------------SPOTIFY CONFIG-------------------------
-
 @app.get("/spotify/config/check")
 def check_spotify_config():
-    """
-    Sprawdza czy konfiguracja Spotify jest poprawna.
-    """
+    '''
+    Wejście: Brak (korzysta ze zmiennych środowiskowych .env: CLIENT_ID, SECRET, REDIRECT_URI).
+    Wyjście: Obiekt klasy spotipy.oauth2.SpotifyOAuth.
+    Opis: Inicjalizuje menedżera autoryzacji. Sprawdza obecność kluczy w pliku .env i konfiguruje klienta OAuth bez zapisywania tokenów w pliku cache (cache_path=None).
+    '''
     client_id = os.getenv("SPOTIPY_CLIENT_ID")
     client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
     redirect_uri = os.getenv("SPOTIPY_REDIRECT_URI")

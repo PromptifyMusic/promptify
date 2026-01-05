@@ -1,6 +1,0 @@
-﻿DATABASE_URL=postgresql://postgres:TWOJE_HASLO@localhost:5432/postgres
-
-SPOTIPY_CLIENT_ID=twoje_client_id
-SPOTIPY_CLIENT_SECRET=twoje_client_secret
-SPOTIPY_REDIRECT_URI=http://127.0.0.1:8000/callback
-FRONTEND_URL=http://localhost:5173
