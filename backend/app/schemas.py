@@ -3,6 +3,18 @@ from pydantic import BaseModel, Field
 from typing import Optional, Any, List
 
 
+class SearchRequest(BaseModel):
+    text: str = Field(..., description="Prompt użytkownika (np. 'energiczna muzyka do biegania')")
+    top_n: int = Field(15, ge=1, le=50, description="Liczba utworów do zwrócenia")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "text": "szybki rock",
+                "top_n": 15
+            }
+        }
+
 
 class PlaylistCreateRequest(BaseModel):
     name: str

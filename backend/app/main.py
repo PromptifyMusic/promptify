@@ -143,16 +143,14 @@ def replace_song_endpoint(
 
 @app.post("/search", response_model=List[schemas.SongResult])
 def search_songs(
-# Tutaj definiujemy parametry zapytania (Query Params)
-        text: str = Query(..., description="Prompt"),
-        ilosc: int = Query(15, alias="top_n", ge=1, le=50),
+        request: schemas.SearchRequest,
         # Wstrzykujemy sesję bazy danych (KLUCZOWE dla nowej wersji)
         db: Session = Depends(get_db)):
 
     """
         Wejście:
-            - text (str): Tekst zapytania użytkownika (prompt, np. "szybki rock do biegania").
-            - ilosc (int): Oczekiwana długość playlisty (domyślnie 15).
+            - request.text (str): Tekst zapytania użytkownika (prompt, np. "szybki rock do biegania").
+            - request.top_n (int): Oczekiwana długość playlisty (domyślnie 15).
             - db (Session): Aktywna sesja połączenia z bazą danych.
 
         Wyjście:
@@ -167,8 +165,8 @@ def search_songs(
             5. Podział wyników na poziomy jakości  i finalne, ważone losowanie utworów z uwzględnieniem ich popularności.
       """
     # Przypisanie zmiennych z parametrów
-    prompt = text
-    final_n = ilosc
+    prompt = request.text
+    final_n = request.top_n
 
     print(f"\nNOWE ZAPYTANIE: '{prompt}' (Top {final_n})")
 
