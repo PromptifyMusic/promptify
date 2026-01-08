@@ -2,6 +2,88 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+export interface PlaylistTrack {
+    spotify_id: string;
+    name: string;
+    artist: string;
+    popularity?: number;
+    score?: number;
+    spotify_preview_url?: string | null;
+    album_images?: string | null;
+    duration_ms: number;
+}
+
+/**
+ * Generuje playlistę na podstawie promptu użytkownika
+ * Wykorzystuje silnik rekomendacji z backendu (endpoint /search)
+ */
+export const generatePlaylist = async (
+    prompt: string,
+    quantity: number
+): Promise<PlaylistTrack[]> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                text: prompt,
+                top_n: quantity,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(
+                errorData?.detail || `HTTP error! status: ${response.status}`
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error generating playlist:', error);
+        throw error;
+    }
+};
+
+/**
+ * Wymienia utwór na inny pasujący do promptu
+ * Wykorzystuje silnik rekomendacji z backendu (endpoint /search/replace)
+ */
+export const replaceSong = async (
+    prompt: string,
+    rejectedSongId: string,
+    currentPlaylistIds: string[]
+): Promise<PlaylistTrack> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/search/replace`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                text: prompt,
+                rejected_song_id: rejectedSongId,
+                current_playlist_ids: currentPlaylistIds,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(
+                errorData?.detail || `HTTP error! status: ${response.status}`
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error replacing song:', error);
+        throw error;
+    }
+};
+
+// Stara funkcja tymczasowa - zachowana dla kompatybilności wstecznej
 export interface TempPlaylistTrack {
     track_id: string;      // ID z bazy danych (Million Song Dataset)
     spotify_id: string;    // ID Spotify (używane do API)
@@ -12,6 +94,7 @@ export interface TempPlaylistTrack {
 }
 
 /**
+ * @deprecated Użyj generatePlaylist() zamiast tego
  * Generuje tymczasową playlistę poprzez losowanie utworów z bazy danych
  */
 export const generateTempPlaylist = async (

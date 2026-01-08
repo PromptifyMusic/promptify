@@ -1,6 +1,6 @@
 ﻿import { useState, useCallback } from 'react';
 import { PlaylistItem } from '../components/playlist/PlaylistSection';
-import { getRandomTrack, formatDuration } from '../services/api';
+import { replaceSong, formatDuration } from '../services/api';
 
 /**
  * Custom hook do zarządzania operacjami na playliście
@@ -11,25 +11,28 @@ export const usePlaylistOperations = () => {
     const [isAddingItem, setIsAddingItem] = useState(false);
 
     /**
-     * Regeneruje pojedynczy utwór w playliście
+     * Regeneruje pojedynczy utwór w playliście używając inteligentnej wymiany
      */
     const regenerateItem = useCallback(async (
         id: string,
+        prompt: string,
+        currentPlaylistIds: string[],
+        rejectedSongId: string,
         onSuccess: (updatedItem: Omit<PlaylistItem, 'id'>) => void,
         onError?: (error: Error) => void
     ) => {
         setRegeneratingItems((prev) => new Set(prev).add(id));
 
         try {
-            const track = await getRandomTrack();
+            const track = await replaceSong(prompt, rejectedSongId, currentPlaylistIds);
 
             const updatedItem = {
-                trackId: track.track_id,
+                trackId: track.spotify_id,
                 spotifyId: track.spotify_id,
                 title: track.name,
-                artist: track.artist,
+                artist: track.artist || 'Unknown Artist',
                 duration: formatDuration(track.duration_ms),
-                image: track.image,
+                image: track.album_images,
             };
 
             onSuccess(updatedItem);
@@ -50,24 +53,27 @@ export const usePlaylistOperations = () => {
     }, []);
 
     /**
-     * Dodaje nowy losowy utwór do playlisty
+     * Dodaje nowy utwór do playlisty (także używa inteligentnej wymiany, ale bez rejected_song_id)
      */
     const addItem = useCallback(async (
+        prompt: string,
+        currentPlaylistIds: string[],
         onSuccess: (newItem: Omit<PlaylistItem, 'id'>) => void,
         onError?: (error: Error) => void
     ) => {
         setIsAddingItem(true);
 
         try {
-            const track = await getRandomTrack();
+            // Używamy pustego rejected_song_id dla dodawania nowego utworu
+            const track = await replaceSong(prompt, '', currentPlaylistIds);
 
             const newItem = {
-                trackId: track.track_id,
+                trackId: track.spotify_id,
                 spotifyId: track.spotify_id,
                 title: track.name,
-                artist: track.artist,
+                artist: track.artist || 'Unknown Artist',
                 duration: formatDuration(track.duration_ms),
-                image: track.image,
+                image: track.album_images,
             };
 
             onSuccess(newItem);

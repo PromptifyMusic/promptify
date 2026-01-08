@@ -3,7 +3,7 @@ import InputSection from "./components/layout/InputSection.tsx";
 import PlaylistSection, { PlaylistItem } from "./components/playlist/PlaylistSection.tsx";
 import { useState, useRef, useEffect } from "react";
 import SpotifyAuth from "./components/playlist/SpotifyAuth.tsx";
-import { generateTempPlaylist, formatDuration } from "./services/api.ts";
+import { generatePlaylist, formatDuration } from "./services/api.ts";
 import { usePlaylistOperations } from "./hooks/usePlaylistOperations.ts";
 import { generatePlaylistItemId } from "./utils/generateId.ts";
 function App() {
@@ -13,30 +13,31 @@ function App() {
     const [isLoading, setIsLoading] = useState(false);
     const [initialQuantity, setInitialQuantity] = useState<number>(0);
     const [playlistName, setPlaylistName] = useState<string>('Playlista');
+    const [originalPrompt, setOriginalPrompt] = useState<string>('');
     const deleteTimeoutsRef = useRef<Map<string, number>>(new Map());
 
     // Custom hook do zarządzania operacjami na playliście
     const { regeneratingItems, isAddingItem, regenerateItem, addItem } = usePlaylistOperations();
 
 
-    const handleCreatePlaylist = async (_prompt: string, quantity: number) => {
-        // TODO: Use prompt for actual API call (future implementation)
+    const handleCreatePlaylist = async (prompt: string, quantity: number) => {
         setIsLoading(true);
         setInitialQuantity(quantity);
+        setOriginalPrompt(prompt); // Zapisz prompt dla przyszłych operacji
 
         try {
-            // Wywołanie prawdziwego API backendu
-            const tracks = await generateTempPlaylist(quantity);
+            // Wywołanie prawdziwego API backendu z promptem
+            const tracks = await generatePlaylist(prompt, quantity);
 
             // Mapowanie danych z backendu na format PlaylistItem
             const playlistItems: PlaylistItem[] = tracks.map((track) => ({
-                id: generatePlaylistItemId(track.track_id),  // Unikalny ID: trackId + timestamp
-                trackId: track.track_id,                     // ID z bazy danych
-                spotifyId: track.spotify_id,                 // ID Spotify
+                id: generatePlaylistItemId(track.spotify_id),  // Unikalny ID: spotifyId + timestamp
+                trackId: track.spotify_id,                     // Używamy spotify_id jako trackId
+                spotifyId: track.spotify_id,                   // ID Spotify
                 title: track.name,
-                artist: track.artist,
+                artist: track.artist || 'Unknown Artist',
                 duration: formatDuration(track.duration_ms),
-                image: track.image,
+                image: track.album_images,
             }));
 
             setPlaylistItems(playlistItems);
@@ -87,8 +88,18 @@ function App() {
     }, []);
 
     const handleRegenerateItem = async (id: string) => {
+        // Znajdź spotify_id utworu, który ma być wymieniony
+        const itemToReplace = playlistItems.find(item => item.id === id);
+        if (!itemToReplace) return;
+
+        // Pobierz listę wszystkich spotify_id z playlisty
+        const currentSpotifyIds = playlistItems.map(item => item.spotifyId);
+
         await regenerateItem(
             id,
+            originalPrompt,
+            currentSpotifyIds,
+            itemToReplace.spotifyId,
             (updatedTrack) => {
                 setPlaylistItems((items) => {
                     if (!items.some((item) => item.id === id)) {
@@ -113,13 +124,20 @@ function App() {
     };
 
     const handleAddItem = async () => {
-        await addItem((newTrack) => {
-            const newItem: PlaylistItem = {
-                ...newTrack,
-                id: generatePlaylistItemId(newTrack.trackId),  // Unikalny ID
-            };
-            setPlaylistItems((items) => [...items, newItem]);
-        });
+        // Pobierz listę wszystkich spotify_id z playlisty
+        const currentSpotifyIds = playlistItems.map(item => item.spotifyId);
+
+        await addItem(
+            originalPrompt,
+            currentSpotifyIds,
+            (newTrack) => {
+                const newItem: PlaylistItem = {
+                    ...newTrack,
+                    id: generatePlaylistItemId(newTrack.trackId),  // Unikalny ID
+                };
+                setPlaylistItems((items) => [...items, newItem]);
+            }
+        );
     };
 
     const handlePlaylistNameChange = (name: string) => {
