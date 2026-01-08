@@ -166,7 +166,7 @@ export const formatDuration = (durationMs: number): string => {
 export interface ExportPlaylistRequest {
     name: string;
     description?: string;
-    track_ids: string[];
+    song_ids: string[];
     public?: boolean;
 }
 
