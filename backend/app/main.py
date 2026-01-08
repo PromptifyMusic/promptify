@@ -337,7 +337,7 @@ def login_spotify():
 
 
 @app.get("/callback")
-def callback_spotify(code: str):
+def callback_spotify(code: str = None, error: str = None):
     """
     Krok 2: Spotify wraca tutaj z kodem lub błędem.
     - Sukces: ?code=XXX
