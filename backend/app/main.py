@@ -534,3 +534,88 @@ def create_playlist_hardcoded():
         "cover_status": cover_msg,
         "tracks_count": len(spotify_uris)
     }
+
+
+@app.post("/export_playlist")
+def export_playlist(request: schemas.PlaylistCreateRequest):
+    """
+    Eksportuje playlistę do Spotify na podstawie danych z requestu.
+
+    Input:
+        - request.name (str): Nazwa playlisty
+        - request.description (str, optional): Opis playlisty
+        - request.song_ids (List[str]): Lista Spotify ID utworów
+        - request.public (bool, optional): Czy playlista ma być publiczna (domyślnie False)
+
+    Output:
+        - status (str): Status operacji
+        - message (str): Komunikat
+        - playlist_id (str): ID utworzonej playlisty
+        - playlist_url (str): URL do playlisty
+        - playlist_name (str): Nazwa playlisty
+        - tracks_count (int): Liczba dodanych utworów
+        - public (bool): Czy playlista jest publiczna
+    """
+
+    # Autoryzacja
+    token_info = user_tokens.get('current_user')
+    if not token_info:
+        raise HTTPException(status_code=401, detail="Najpierw zaloguj się na /login")
+
+    # Sprawdź czy token nie wygasł
+    sp_oauth = get_spotify_oauth()
+    if sp_oauth.is_token_expired(token_info):
+        try:
+            token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+            user_tokens['current_user'] = token_info
+        except Exception as e:
+            raise HTTPException(status_code=401, detail=f"Token wygasł i nie można go odświeżyć: {str(e)}")
+
+    try:
+        sp = spotipy.Spotify(auth=token_info['access_token'])
+        user_id = sp.current_user()['id']
+
+        # Konwersja ID na Spotify URI
+        spotify_uris = []
+        for sid in request.song_ids:
+            if "spotify:track:" not in sid:
+                spotify_uris.append(f"spotify:track:{sid}")
+            else:
+                spotify_uris.append(sid)
+
+        # Tworzenie playlisty
+        playlist = sp.user_playlist_create(
+            user=user_id,
+            name=request.name,
+            public=request.public,
+            description=request.description
+        )
+
+        # Dodawanie utworów do playlisty
+        if spotify_uris:
+            # Spotify API akceptuje max 100 utworów na raz
+            for i in range(0, len(spotify_uris), 100):
+                batch = spotify_uris[i:i + 100]
+                sp.playlist_add_items(playlist_id=playlist['id'], items=batch)
+
+        return {
+            "status": "success",
+            "message": "Playlista została pomyślnie utworzona w Spotify",
+            "playlist_id": playlist['id'],
+            "playlist_url": playlist['external_urls']['spotify'],
+            "playlist_name": request.name,
+            "tracks_count": len(spotify_uris),
+            "public": request.public
+        }
+
+    except spotipy.exceptions.SpotifyException as e:
+        error_msg = str(e)
+        if "403" in error_msg or "Forbidden" in error_msg:
+            raise HTTPException(
+                status_code=403,
+                detail="Brak uprawnień. Upewnij się, że zalogowany użytkownik ma odpowiednie uprawnienia w Spotify."
+            )
+        raise HTTPException(status_code=500, detail=f"Błąd Spotify API: {error_msg}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Błąd podczas tworzenia playlisty: {str(e)}")

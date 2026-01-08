@@ -20,6 +20,7 @@ class PlaylistCreateRequest(BaseModel):
     name: str
     description: Optional[str] = "Playlista stworzona przez Songs API"
     song_ids: List[str]
+    public: Optional[bool] = False
 
 
 
