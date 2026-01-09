@@ -24,10 +24,13 @@ import AddPlaylistItem from './AddPlaylistItem.tsx';
 import ExportToSpotifyButton from './ExportToSpotifyButton.tsx';
 
 export interface PlaylistItem {
-    id: string;
+    id: string;              // Unikalny ID elementu playlisty (React key)
+    trackId: string;         // ID utworu z bazy danych (Million Song Dataset)
+    spotifyId: string;       // ID Spotify (używane do API)
     title: string;
     artist: string;
     duration: string;
+    image?: string | null;
 }
 
 interface PlaylistSectionProps {
@@ -77,8 +80,10 @@ const PlaylistSection = memo(({
         const {active, over} = event;
 
         if (over && active.id !== over.id) {
-            const oldIndex = playlistItems.findIndex((item) => item.id === active.id);
-            const newIndex = playlistItems.findIndex((item) => item.id === over.id);
+            const activeId = String(active.id);
+            const overId = String(over.id);
+            const oldIndex = playlistItems.findIndex((item) => item.id === activeId);
+            const newIndex = playlistItems.findIndex((item) => item.id === overId);
             const reorderedItems = arrayMove(playlistItems, oldIndex, newIndex);
             onReorderItems(reorderedItems);
         }
@@ -114,6 +119,7 @@ const PlaylistSection = memo(({
                                     title={item.title}
                                     artist={item.artist}
                                     duration={item.duration}
+                                    image={item.image}
                                     onDelete={onDeleteItem}
                                     onRegenerate={onRegenerateItem}
                                     isRegenerating={regeneratingItems.has(item.id)}

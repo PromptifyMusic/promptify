@@ -35,7 +35,7 @@ services:
       - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/postgres
       - SPOTIPY_CLIENT_ID=${SPOTIPY_CLIENT_ID}
       - SPOTIPY_CLIENT_SECRET=${SPOTIPY_CLIENT_SECRET}
-      - SPOTIPY_REDIRECT_URI=http://localhost:8000/callback
+      - SPOTIPY_REDIRECT_URI=http://127.0.0.1:8000/callback
       - FRONTEND_URL=http://localhost:5173
     volumes:
       - ./backend:/app

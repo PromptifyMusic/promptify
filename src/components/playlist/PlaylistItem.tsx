@@ -7,13 +7,14 @@ interface PlaylistItemProps {
   title: string;
   artist: string;
   duration?: string;
+  image?: string | null;
   onDelete: (id: string) => void;
   onRegenerate: (id: string) => void;
   isRegenerating?: boolean;
   isDeleting?: boolean;
 }
 
-const PlaylistItem = memo(({ id, title, artist, duration, onDelete, onRegenerate, isRegenerating = false, isDeleting = false }: PlaylistItemProps) => {
+const PlaylistItem = memo(({ id, title, artist, duration, image, onDelete, onRegenerate, isRegenerating = false, isDeleting = false }: PlaylistItemProps) => {
   const handleDelete = () => {
     onDelete(id);
   };
@@ -26,10 +27,18 @@ const PlaylistItem = memo(({ id, title, artist, duration, onDelete, onRegenerate
     <div className={`group flex items-center gap-4 p-3 rounded-lg hover:bg-white/5 transition-all duration-200 cursor-pointer ${
       isRegenerating ? 'animate-pulse bg-white/5' : ''
     } ${isDeleting ? 'scale-95 blur-sm' : ''}`}>
-      <div className={`flex-shrink-0 w-12 h-12 bg-white/10 rounded-md flex items-center justify-center transition-opacity duration-200 ${
+      <div className={`flex-shrink-0 w-12 h-12 bg-white/10 rounded-md flex items-center justify-center overflow-hidden transition-opacity duration-200 ${
         isRegenerating ? 'opacity-50' : ''
       }`}>
-        <Music className="w-6 h-6 text-white/70" />
+        {image ? (
+          <img
+            src={image}
+            alt={`${title} album cover`}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <Music className="w-6 h-6 text-white/70" />
+        )}
       </div>
 
       <div className={`flex-1 min-w-0 transition-opacity duration-200 ${
