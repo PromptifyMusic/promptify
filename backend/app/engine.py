@@ -16,134 +16,136 @@ from . import models
 
 
 
-#modele
-model_e5 = SentenceTransformer('intfloat/multilingual-e5-base')
-model_gliner = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
+DetectorFactory.seed = 0
 
-#1. KONFIGURACJA EKSTRAKCJI I DOPASOWANIA (NLP / E5 / GLiNER)
+
+
 EXTRACTION_CONFIG = {
-    "gliner_threshold": 0.3, # Próg pewności dla GLiNERa (klasyfikacja: czy to tag, czy audio?)
-    "tag_similarity_threshold": 0.65, # Próg podobieństwa cosinusowego dla mapowania frazy na Tag w bazie (E5)
-    "audio_confidence_threshold": 0.78, # Próg pewności dla mapowania frazy na cechę Audio (E5)
+    "gliner_threshold": 0.3,
+    "tag_similarity_threshold": 0.65,
+    "audio_confidence_threshold": 0.78,
 }
+
+SCORING_CONFIG = {
+    # Tagi
+    "use_idf": True,
+    "query_pow": 1.0,
+
+    # Fuzja
+    "audio_weight": 0.4,
+
+}
+
+
+RETRIEVAL_CONFIG = {
+    "n_candidates": 400,
+    "flat_delta": 0.05,
+}
+
+
+WORKSET_CONFIG = {
+
+    "min_absolute_high": 0.75,
+    "min_absolute_mid": 0.50,
+
+    "target_pool_size": 100,
+    "min_required_size": 15,
+
+    "popularity_rescue_ratio": 0.2,
+}
+
+POPULARITY_CONFIG = {
+    "p_high": 70,
+    "p_mid": 35,
+
+    "mix": {
+        "high": 0.40,
+        "mid":  0.35,
+        "low":  0.25,
+    },
+
+
+    "forced_popular": 2,
+    "forced_popular_min": 80,
+}
+
+SAMPLING_CONFIG = {
+    "final_n": 15,
+    "alpha": 2.0,
+    "shuffle": True,
+}
+
+
 
 GENERIC_LEMMAS = [
     "music", "song", "track", "playlist", "list", "recording", "audio", "sound", "style", "vibe", "type", "kind", "number", "piece",
     "muzyka", "piosenka", "utwór", "kawałek", "lista", "nagranie", "dźwięk", "gatunek", "styl", "klimat", "typ", "rodzaj"
 ]
 
-# 2. KONFIGURACJA PUNKTACJI (SCORING)
-SCORING_CONFIG = {
-    # Tagi
-    "use_idf": True,            # Czy rzadsze tagi mają ważyć więcej? (Zalecane: True)
-    "query_pow": 1.0,           # Wyostrzanie wag z promptu (1.0 = liniowo, >1.0 = faworyzuje główne frazy)
-
-    # Fuzja
-    "audio_weight": 0.4,        # Ile wagi ma Audio vs Tagi? (0.4 = 40% Audio, 60% Tagi)
-                                # Jeśli nie znaleziono tagów, kod automatycznie ustawi 1.0 dla Audio.
-}
-
-# 3. KONFIGURACJA POSZUKIWANIA KANDYDATÓW (RETRIEVAL)
-RETRIEVAL_CONFIG = {
-    "n_candidates": 400,        # Ile utworów wstępnie pobieramy z bazy (top N po tagach)
-    "flat_delta": 0.05,         # Soft cut-off: o ile gorszy wynik akceptujemy, by nie ucinać "na sztywno"
-}
-
-# 4. KONFIGURACJA TIERÓW I ZBIORU ROBOCZEGO (WORKING SET)
-WORKSET_CONFIG = {
-    # Progi jakości (Quality Gates) dla funkcji calculate_dynamic_thresholds
-    "min_absolute_high": 0.75,  # Próg dla Tier A nie spadnie poniżej tego
-    "min_absolute_mid": 0.50,   # Próg dla Tier B nie spadnie poniżej tego
-
-    # Budowanie zbioru roboczego
-    "target_pool_size": 100,    # Do ilu utworów chcemy dobić przed finalnym losowaniem
-    "min_required_size": 15,    # Absolutne minimum (ratujemy się Tierem C, jeśli mniej)
-
-    # Ratowanie hitów z Tieru B
-    "popularity_rescue_ratio": 0.2, # 20% miejsc z Tieru B rezerwujemy dla najpopularniejszych (nawet jeśli mają niższy score)
-}
-
-# 5. KONFIGURACJA POPULARNOŚCI (BUCKETING)
-POPULARITY_CONFIG = {
-    # Progi podziału na koszyki
-    "p_high": 70,               # Powyżej 70 to High Popularity
-    "p_mid": 35,                # Powyżej 35 to Mid Popularity
-
-    # Docelowy miks w finalnej playliście (musi sumować się do 1.0)
-    "mix": {
-        "high": 0.40,           # 40% Hitów
-        "mid":  0.35,           # 35% Solidnych średniaków
-        "low":  0.25,           # 25% Niszowych odkryć
-    },
-
-    # Kotwice (Forced Popular)
-    "forced_popular": 2,        # Ile super-hitów wrzucić na start (gwarantowane)
-    "forced_popular_min": 80,   # Jaka popularność definiuje super-hit do sekcji forced
-}
-
-# 6. KONFIGURACJA FINALNEGO LOSOWANIA (SAMPLING)
-SAMPLING_CONFIG = {
-    "final_n": 15,              # Długość playlisty
-    "alpha": 2.0,               # Temperatura losowania (Weighted Sample).
-                                # 2.0 = mocno faworyzuje utwory z wysokim score (pasujące).
-                                # 0.0 = losowanie całkowicie losowe (ignoruje score).
-    "shuffle": True,            # Czy pomieszać kolejność na końcu? (False = sortowanie po score, do debugu)
-}
 
 
 
 
+print("[ENGINE] Ładowanie modeli AI")
+model_e5 = SentenceTransformer('intfloat/multilingual-e5-base')
+model_gliner = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
 
-
-
-
-
-
-
-
-
-DetectorFactory.seed = 0
 
 nlp_pl = spacy.load("pl_core_news_lg")
 nlp_en = spacy.load("en_core_web_md")
 
+
+TAG_VECS = None
+TAGS_LIST = None
+def initialize_global_tags(db: Session):
+
+    global TAG_VECS, TAGS_LIST
+    print("[ENGINE] Pobieranie wektorów tagów z Bazy do RAMu...")
+
+    tags_db = db.query(models.Tag).filter(models.Tag.tag_embedding.isnot(None)).all()
+
+    if tags_db:
+        TAGS_LIST = [t.name for t in tags_db]
+        TAG_VECS = np.array([t.tag_embedding for t in tags_db], dtype=np.float32)
+        print(f"[ENGINE] Sukces: Załadowano {len(TAGS_LIST)} tagów do pamięci.")
+    else:
+        print("[ENGINE] Ostrzeżenie: Brak tagów w bazie danych!")
+        TAGS_LIST = []
+        TAG_VECS = np.array([])
+#---------------------------------------------------
+
+
 GENERIC_VERBS = [
-    # --- POLSKI (Bezokoliczniki / Lematy) ---
-    # Szukanie / Chcenie
+
     "szukać", "poszukiwać", "chcieć", "pragnąć", "potrzebować", "woleć", "wymagać",
-    # Bycie / Posiadanie
+
     "być", "mieć", "znajdować", "znaleźć", "słuchać", "posłuchać", "grać", "zależeć",
-    # Słuchanie / Odtwarzanie
+
     "słuchać", "posłuchać", "usłyszeć", "grać", "zagrać", "puszczać", "puścić", "odtworzyć", "zapodać",
-    # Prośby / Rekomendacje
+
     "prosić", "polecić", "polecać", "rekomendować", "sugerować", "zaproponować", "dawać", "dać",
 
-    # --- ANGIELSKI (Base forms) ---
-    # Searching / Wanting
     "search", "look", "find", "want", "need", "desire", "wish", "require",
-    # Being / Having
+
     "be", "have", "get",
-    # Listening / Playing
+
     "listen", "hear", "play", "replay", "stream",
-    # Requests
+
     "give", "recommend", "suggest", "show", "provide",
 ]
 
 NEGATION_TERMS = [
-    # PL
+
     "nie", "bez", "mało", "zero", "ani", "żaden", "brak", "mniej",
-    # EN
+
     "no", "not", "without", "less", "non", "neither", "nor", "lack", "zero"
 ]
 
 
 
 def create_matcher_for_nlp(nlp_instance):
-    """Tworzy obiekt Matcher przypisany do konkretnego modelu językowego"""
     matcher = Matcher(nlp_instance.vocab)
 
-    # Warunek wykluczający
-    # To musi być Rzeczownik, ale nie może być na liście generycznej
     noun_filter = {
         "POS": {"IN": ["NOUN", "PROPN"]},
         "IS_STOP": False,
@@ -151,63 +153,41 @@ def create_matcher_for_nlp(nlp_instance):
     }
 
     matcher.add("FRAZA", [
-        # 1. Samodzielny rzeczownik lub nazwa własna
-        # Wyłapuje pojedyncze słowa kluczowe, np. "rock", "jazz", "Metallica".
         [noun_filter],
 
-        # 2. Przymiotnik + Rzeczownik
-        # Klasyczna fraza opisująca cechę obiektu, np. "szybki bas", "ciężkie brzmienie".
         [{"POS": "ADJ"}, noun_filter],
 
-        # 3. Wyrażenie przyimkowe (opcjonalnie poprzedzone przysłówkiem)
-        # Określa przeznaczenie, styl lub pochodzenie, np. "do tańca", "z klimatem", "prosto z serca".
         [{"POS": "ADV", "OP": "?"}, {"POS": "ADP"}, noun_filter],
 
-        # 4. Przysłówek + Przymiotnik
-        # Służy do wzmocnienia lub doprecyzowania cechy, np. "bardzo wesoła", "niezwykle głośny".
         [{"POS": "ADV"}, {"POS": "ADJ", "IS_STOP": False}],
 
-        # 5. Samodzielny przymiotnik
-        # Gdy użytkownik używa samej cechy bez rzeczownika (częste w mowie potocznej), np. "rockowa", "spokojne".
         [{"POS": "ADJ", "IS_STOP": False}],
 
-        # 6. Rzeczowniki złożone (Dwa rzeczowniki obok siebie)
-        # Wyłapuje gatunki lub nazwy dwuczłonowe, np. "post rock", "hip hop", "death metal".
         [{"POS": {"IN": ["NOUN", "PROPN"]}, "IS_STOP": False}, noun_filter],
 
-        # 7. Rozbudowana fraza przymiotnikowa z przyimkiem
-        # Opisuje przydatność lub relację, np. "dobra do tańca", "idealny na imprezę".
         [{"POS": "ADV", "OP": "?"}, {"POS": "ADJ"}, {"POS": "ADP"}, noun_filter],
 
-        # 8. Fraza czasownikowa (Czasownik + Dopełnienie)
-        # Wyklucza ogólne czasowniki
         [
             {"POS": "VERB", "LEMMA": {"NOT_IN": GENERIC_VERBS}},
-            {"POS": {"IN": ["NOUN", "ADJ", "PRON"]}, "OP": "+"} # Dopełnienie (może składać się z kilku słów)
+            {"POS": {"IN": ["NOUN", "ADJ", "PRON"]}, "OP": "+"}
         ],
 
-        [{"POS": "ADP"}, {"POS": "NOUN"}, {"IS_DIGIT": True}], # np. "z lat 90"
+        [{"POS": "ADP"}, {"POS": "NOUN"}, {"IS_DIGIT": True}],
         [{"POS": "NOUN"}, {"IS_DIGIT": True}],
 
-        # Wzorzec na gatunki z myślnikiem:
         [{"POS": {"IN": ["NOUN", "PROPN", "ADJ"]}}, {"ORTH": "-"}, {"POS": {"IN": ["NOUN", "PROPN", "ADJ"]}}],
     ])
     return matcher
 
-# Tworzymy matchery raz na starcie
 matcher_pl = create_matcher_for_nlp(nlp_pl)
 matcher_en = create_matcher_for_nlp(nlp_en)
 
 
 
 
-# 4. FUNKCJA POMOCNICZA: SPRAWDZANIE NEGACJI
 
 def is_span_negated(doc, start_index, window=2):
-    """
-    Sprawdza, czy przed frazą (start_index) stoi słowo przeczące.
-    Patrzy 'window' tokenów wstecz.
-    """
+
     lookback = max(0, start_index - window)
     preceding_tokens = doc[lookback:start_index]
 
@@ -217,10 +197,8 @@ def is_span_negated(doc, start_index, window=2):
     return False
 
 
-# GŁÓWNA FUNKCJA EKSTRAKCJI
 
 def extract_relevant_phrases(prompt):
-    # Setup językowy
     prompt = prompt.lower()
     prompt_clean = prompt.strip()
 
@@ -243,26 +221,20 @@ def extract_relevant_phrases(prompt):
 
     doc = current_nlp(prompt)
 
-    # Matcher
     matcher_matches = current_matcher(doc)
 
-    # Konwersja matchy na obiekty Span
     matcher_spans = [doc[start:end] for match_id, start, end in matcher_matches]
 
-    # filter_spans usuwa nakładające się frazy (np. "rock" wewnątrz "post rock")
-    # zostawiając najdłuższe dopasowanie
     combined_spans = filter_spans(matcher_spans)
 
     final_phrases = []
 
     for span in combined_spans:
-        # Sprawdzanie negacji
         if is_span_negated(doc, span.start):
             continue
 
         final_phrases.append(span.text.lower())
 
-    # Czyszczenie i sortowanie wyników
     unique_phrases = sorted(list(set([p.strip() for p in final_phrases if len(p.strip()) > 2])))
 
     print(f"[{lang_msg}] Prompt: '{prompt}' \n-> {unique_phrases}")
@@ -270,14 +242,7 @@ def extract_relevant_phrases(prompt):
     return unique_phrases
 
 
-
-
-# KONFIGURACJA DO KLASYFIKACJI FRAZ
-
-# GLiNER ma odróżnić Tag (np. rock) od cech audio (np. szybka).
-
 LABELS_CONFIG = {
-    # --- TAGI ---
     "gatunek_muzyczny": {
         "desc": "rock, pop, jazz, hip hop, metal, indie, alternative, emo, psychedelic, industrial, grunge, punk, pank, postpankowy, post-punk, folk, electronic, experimental, noise music",
         "route": "TAGS"
@@ -303,15 +268,12 @@ LABELS_CONFIG = {
         "route": "TAGS"
     },
 
-    # --- WSZYSTKO INNE (dane audio) ---
-    # Wrzucamy wszystko co jest opisem tutaj.
     "cecha_audio": {
         "desc": "sad, happy, fast, slow, danceable, party, energetic, calm, relaxing, loud, quiet, acoustic, electronic, melancholic, gloomy, euphoric, club banger",
         "route": "AUDIO"
     }
 }
 
-# Generowanie zmiennych
 GLINER_LABELS = [f"{k} ({v['desc']})" for k, v in LABELS_CONFIG.items()]
 ROUTING_MAP = {k: v['route'] for k, v in LABELS_CONFIG.items()}
 
@@ -319,26 +281,9 @@ ROUTING_MAP = {k: v['route'] for k, v in LABELS_CONFIG.items()}
 
 
 def get_label_config_lists(config):
-    """
-    Przetwarza konfigurację etykiet, tworząc listę sformatowanych stringów dla modelu GLiNER
-    oraz mapę powrotną do oryginalnych kluczy.
 
-    Args:
-        config (Dict[str, Dict[str, str]]): Słownik konfiguracyjny, w którym:
-            - Kluczem (str) jest nazwa kategorii (np. 'gatunek_muzyczny').
-            - Wartością (dict) jest słownik zawierający co najmniej klucz 'desc'
-              z opisem słownym (np. 'rock, pop...').
-
-    Returns:
-        Tuple[List[str], Dict[str, str]]: Krotka zawierająca dwa elementy:
-            1. gliner_labels (List[str]): Lista sformatowanych etykiet w postaci "Klucz (Opis)".
-               Przykład: ["gatunek_muzyczny (rock, pop...)", ...].
-            2. label_mapping (Dict[str, str]): Słownik mapujący pełną etykietę z powrotem na klucz.
-               Przykład: {"gatunek_muzyczny (rock, pop...)": "gatunek_muzyczny"}.
-    """
     gliner_labels = []
-    label_mapping = {} # Mapa {"nazwa (opis)": "nazwa"}
-
+    label_mapping = {}
     for key, value in config.items():
         full_label = f"{key} ({value['desc']})"
         gliner_labels.append(full_label)
@@ -350,46 +295,19 @@ GLINER_LABELS_LIST, GLINER_LABEL_MAP = get_label_config_lists(LABELS_CONFIG)
 
 
 def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.3):
-    """
-    Klasyfikuje frazy wykryte przez spaCy, dopasowując je do encji wykrytych przez model GLiNER
-    w kontekście całego promptu.
-
-    Funkcja łączy precyzyjne wycinanie fraz (spaCy) z rozumieniem kontekstu (GLiNER).
-    Opiera się na globalnych zmiennych konfiguracyjnych: GLINER_LABELS_LIST, GLINER_LABEL_MAP oraz LABELS_CONFIG.
-
-    Args:
-        prompt (str): Pełna treść zapytania użytkownika (niezbędna dla kontekstu GLiNERa).
-        spacy_phrases (List[str]): Lista fraz (noun chunks/entities) wyekstrahowanych wcześniej przez spaCy.
-        model (Any): Załadowany model GLiNER (np. obiekt klasy GLiNER).
-        threshold (float, optional): Próg pewności dla predykcji GLiNERa. Domyślnie 0.3.
-
-    Returns:
-        List[Dict[str, str]]: Lista słowników, gdzie każdy słownik reprezentuje sklasyfikowaną frazę:
-            {
-                "phrase": str (oryginalna fraza ze spaCy),
-                "category": str (klucz kategorii np. 'gatunek_muzyczny' lub 'cecha_audio'),
-                "route": str (typ routingu np. 'TAGS' lub 'AUDIO')
-            }
-    """
     if not spacy_phrases:
         return []
 
-    # Uruchamiamy GLiNER na całym tekście
-    # Dzięki temu odróżni "Rock" (gatunek) od "Szybka" (audio)
     gliner_predictions = model.predict_entities(prompt, GLINER_LABELS_LIST, threshold=threshold)
 
     results = []
 
-    # Iterujemy po frazach ze spaCy i szukamy dla nich etykiety w wynikach GLiNERa
     for phrase in spacy_phrases:
         matched_category = None
-        matched_route = "AUDIO" # Domyślny routing
+        matched_route = "AUDIO"
 
-        # Normalizacja frazy spaCy do porównania
         phrase_lower = phrase.lower().strip()
 
-        # Szukamy czy ta fraza została też znaleziona przez GLiNERa
-        # Sprawdzamy czy tekst encji GLiNERa zawiera się w frazie spaCy lub odwrotnie
         best_score = 0
 
         if any(x in phrase_lower for x in ["lat", "rok", "80", "90", "00", "70"]) and any(char.isdigit() for char in phrase_lower):
@@ -400,22 +318,17 @@ def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.3):
         for entity in gliner_predictions:
             entity_lower = entity['text'].lower().strip()
 
-            # Sprawdzenie pokrycia (overlap)
             if phrase_lower in entity_lower or entity_lower in phrase_lower:
-                # Jeśli mamy dopasowanie, pobieramy czystą nazwę kategorii
                 full_label = entity['label']
                 short_key = GLINER_LABEL_MAP.get(full_label)
 
                 if short_key:
                     matched_category = short_key
-                    # Pobieramy routing z konfiguracji
                     matched_route = LABELS_CONFIG[short_key]['route']
-                    break # Znaleźliśmy etykietę, idziemy do następnej frazy spaCy
+                    break
 
-        # Jeśli GLiNER nic nie znalazł dla tej frazy, ale spaCy ją wykryło
-        # oznaczamy jako ogólną "cecha_audio" (w dalszych etapach E5 może ją oznaszyć jako "śmieć")
         if not matched_category:
-            matched_category = "cecha_audio" # Fallback
+            matched_category = "cecha_audio"
             matched_route = "AUDIO"
 
         results.append({
@@ -428,10 +341,6 @@ def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.3):
 
 
 def prepare_queries_for_e5_separated(classified_data, original_prompt):
-    """
-    Rozdziela frazy na Tagi i Audio.
-    Zwraca słownik z dwoma listami: "TAGS" i "AUDIO".
-    """
 
     return {
         "TAGS": [
@@ -503,22 +412,10 @@ FEATURE_DESCRIPTIONS = {
     ],
 
     'speechiness': [
-        # Speechiness > 0.66 to zazwyczaj podcasty, 0.33-0.66 to rap, < 0.33 to muzyka
         ((0.0, 0.22), "very low speechiness, purely musical track, no spoken words, fully melodic music - muzyka, melodia, śpiew, mało gadania"),
         ((0.22, 0.66), "low speechiness, mostly music with occasional spoken words or short background phrases - muzyka ze wstawkami mowy, rap, hip-hop"),
         ((0.66, 1.0), "medium to high speechiness, balanced mix of speech and music, frequent spoken segments, rap-like or talky structure - dużo gadania, mowa, wywiad, audiobook, podcast, recytacja"),
     ],
-
-    # 'noise': [
-    #     # Rzeczowniki (generyczne słowa)
-    #     (None, "music song track playlist list recording audio sound genre style vibe type kind number piece"),
-
-    #     # Czasowniki (związane z szukaniem)
-    #     (None, "I am looking for I want I need search find play listen to give me recommend show me"),
-
-    #     # Przymiotniki (fillery bez konkretnej treści)
-    #     (None, "good very good nice great best cool amazing awesome some any kind of such a")
-    # ]
 }
 
 
@@ -547,12 +444,11 @@ ACTIVITY_GROUPS = {
 
     'sleep_relax': {
         'triggers': [
-            # EN
             "sleeping", "falling asleep", "insomnia", "nap", "napping",
             "meditation", "meditating", "yoga", "mindfulness", "zen",
             "spa", "massage", "calm down", "anxiety relief", "stress relief",
             "lying in bed", "winding down", "evening relaxation", "chill out",
-            # PL
+
             "spanie", "sen", "zasypianie", "bezsenność", "drzemka",
             "medytacja", "joga", "uważność", "spa", "masaź",
             "spokój", "stres", "leżenie w łóżku", "wieczorny relaks",
@@ -569,12 +465,11 @@ ACTIVITY_GROUPS = {
 
     'workout_intense': {
         'triggers': [
-            # EN
             "gym", "weightlifting", "crossfit", "boxing", "kickboxing",
             "hiit", "interval training", "sprint", "running fast", "cardio",
             "beast mode", "motivation", "pump up", "hardcore training",
             "powerlifting", "bodybuilding", "marathon training",
-            # PL
+
             "siłownia", "ciężary", "boks", "interwały", "sprint",
             "bieganie", "szybki bieg", "kardio", "motywacja", "trening",
             "mocny trening", "kulturystyka", "maraton", "ćwiczenia",
@@ -590,12 +485,11 @@ ACTIVITY_GROUPS = {
 
     'commute_jogging': {
         'triggers': [
-            # EN
             "jogging", "walking", "walking the dog", "commuting", "driving",
             "road trip", "car ride", "night drive", "highway", "bus ride",
             "train ride", "traveling", "subway", "city walk", "bike riding",
             "cycling",
-            # PL
+
             "jogging", "trucht", "spacer", "spacer z psem", "dojazd", "jazda autem",
             "samochód", "podróż", "nocna jazda", "autostrada", "autobus",
             "pociąg", "metro", "miasto", "rower", "jazda na rowerze",
@@ -610,12 +504,12 @@ ACTIVITY_GROUPS = {
 
     'party_club': {
         'triggers': [
-            # EN
+
             "party", "house party", "clubbing", "dancing", "dancefloor",
             "friday night", "saturday night", "birthday", "celebration",
             "drinking", "pre-game", "getting ready", "festival", "rave",
             "disco", "summer party", "pool party",
-            # PL
+
             "impreza", "domówka", "klub", "taniec", "parkiet",
             "piątek wieczór", "sobota", "urodziny", "świętowanie",
             "picie", "bifor", "festiwal", "dyskoteka", "letnia impreza",
@@ -631,12 +525,12 @@ ACTIVITY_GROUPS = {
 
     'chores_background': {
         'triggers': [
-            # EN
+
             "cleaning", "cleaning the house", "cooking", "kitchen",
             "doing dishes", "gardening", "chores", "housework",
             "morning coffee", "breakfast", "sunday morning",
             "hanging out", "friends coming over", "dinner party", "barbecue",
-            # PL
+
             "sprzątanie", "porządki", "gotowanie", "kuchnia",
             "zmywanie", "ogród", "prace domowe", "obowiązki",
             "poranna kawa", "śniadanie", "niedziela rano",
@@ -653,12 +547,12 @@ ACTIVITY_GROUPS = {
 
     'sad_emotional': {
         'triggers': [
-            # EN
+
             "sad", "crying", "depression", "depressed", "lonely",
             "heartbreak", "breakup", "missing someone", "rainy day",
             "melancholy", "grieving", "emotional", "moody", "nostalgia",
             "bad day",
-            # PL
+
             "smutek", "płacz", "depresja", "samotność",
             "złamane serce", "rozstanie", "tęsknota", "deszczowy dzień",
             "melancholia", "żałoba", "emocje", "nostalgia",
@@ -674,11 +568,11 @@ ACTIVITY_GROUPS = {
 
     'romance': {
         'triggers': [
-            # EN
+
             "date night", "romantic dinner",
             "candlelight", "intimacy", "cuddling", "boyfriend", "girlfriend",
             "valentine", "sexy", "seduction", "late night", "bedroom",
-            # PL
+
             "randka", "romantyczna kolacja",
             "świece", "nastrojowa", "intymność", "przytulanie", "chłopak", "dziewczyna",
             "walentynki", "seks", "sypialnia", "wieczór we dwoje", "miłość"
@@ -693,11 +587,11 @@ ACTIVITY_GROUPS = {
 
     'gaming': {
         'triggers': [
-            # EN
+
             "gaming", "playing games", "esports", "streaming", "twitch",
             "league of legends", "fortnite", "fps", "rpg", "cyberpunk",
             "hacker", "futuristic",
-            # PL
+
             "granie", "gry", "esport", "stream",
             "strzelanki", "haker", "futurystyczna", "do grania", "gierki"
         ],
@@ -711,34 +605,17 @@ ACTIVITY_GROUPS = {
 
 
 def prepare_search_indices(model, feature_descriptions, activity_groups):
-    """
-    Inicjalizuje i generuje wektorowe indeksy wyszukiwania dla cech audio oraz aktywności.
 
-    Proces polega na transformacji opisów tekstowych (natural language descriptions)
-    na ustandaryzowane osadzenia wektorowe (embeddings) przy użyciu modelu E5.
-
-    Args:
-        model: Model SentenceTransformer (np. multilingual-e5).
-        feature_descriptions (dict): Słownik definicji cech technicznych (np. tempo, energy).
-        activity_groups (dict): Słownik grup aktywności wraz z ich triggerami.
-
-    Returns:
-        dict: Słownik zawierający wygenerowane macierze wektorowe podzielone na AUDIO i ACTIVITY.
-    """
     print("[INIT] Generowanie indeksów wektorowych...")
     indices = {
         'AUDIO': {},
         'ACTIVITY': {}
     }
 
-    # 1. Generowanie indeksów AUDIO (Cechy techniczne)
-    # Dla każdej cechy generujemy wektory na podstawie opisów poziomów (np. low/high tempo)
     for key, descs in feature_descriptions.items():
         passages = [f"passage: {d[1]}" for d in descs]
         indices['AUDIO'][key] = model.encode(passages, normalize_embeddings=True)
 
-    # 2. Generowanie indeksów ACTIVITY (Scenariusze użytkowania)
-    # Tworzymy syntetyczny opis kontekstowy na podstawie triggerów danej aktywności
     for key, data in activity_groups.items():
         triggers_str = ", ".join(data['triggers'])
         desc_text = f"music for {triggers_str}"
@@ -748,41 +625,10 @@ def prepare_search_indices(model, feature_descriptions, activity_groups):
     print(f"[SUCCESS] Zainicjalizowano {len(indices['AUDIO'])} cech audio i {len(indices['ACTIVITY'])} grup aktywności.")
     return indices
 
-# --- SETUP ---
-# Uruchamiane raz przy starcie systemu
 SEARCH_INDICES = prepare_search_indices(model_e5, FEATURE_DESCRIPTIONS, ACTIVITY_GROUPS)
 
 
 def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
-    """
-    Mapuje listę fraz tekstowych na parametry techniczne (audio features) oraz aktywności,
-    wykorzystując hybrydowe podejście oparte na analizie gramatycznej (NLP)
-    oraz osadzeniach wektorowych (embeddings) modelu E5.
-
-    Logika działania:
-    1. Analiza gramatyczna (Routing): Każda fraza jest analizowana przez model spaCy.
-       Na podstawie części mowy (POS) przypisywany jest zakres wyszukiwania:
-       - ACTIVITY_ONLY: Dla przyimków i czasowników (np. "do spania", "biegać").
-       - AUDIO_ONLY: Dla czystych przymiotników i przysłówków (np. "szybka").
-       - BOTH: Dla rzeczowników i fraz mieszanych (np. "tempo", "sen").
-    2. Wyszukiwanie semantyczne: Obliczane jest podobieństwo kosinusowe między wektorem
-       zapytania a wektorami w wybranych indeksach (AUDIO/ACTIVITY).
-    3. Turniej (Max Pooling): W trybie BOTH wygrywa kategoria o najwyższym współczynniku ufności.
-    4. Konsolidacja (Merge): Parametry audio nadpisują domyślne ustawienia aktywności,
-       jeśli ich pewność (confidence) jest wyższa.
-
-    Args:
-        phrases_list (list[str]): Lista fraz wyodrębnionych z promptu (np. ["szybka", "do nauki"]).
-        search_indices (dict): Słownik zawierający wstępnie obliczone embeddingi dla
-            kluczy 'AUDIO' i 'ACTIVITY'.
-        lang_code (str, optional): Kod języka ('pl' lub 'en') decydujący o modelu spaCy
-            i sufiksie kontekstowym. Domyślnie 'pl'.
-
-    Returns:
-        list[tuple]: Posortowana malejąco lista krotek (nazwa_cechy, dane), gdzie dane
-            zawierają docelowy przedział wartości i współczynnik ufności.
-            Przykład: [('n_tempo', {'value': (0.8, 0.9), 'confidence': 0.88})]
-    """
 
     if not phrases_list: return []
 
@@ -803,31 +649,23 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
         suffix = " muzyka" if lang_code == 'pl' else " music"
         context_vec = model_e5.encode([f"query: {suffix} {phrase}"], normalize_embeddings=True)
 
-        # 1. ANALIZA GRAMATYCZNA (NLP)
         doc = nlp_model(phrase.lower())
         first_token = doc[0]
 
-        # Flagi gramatyczne
         is_activity_indicator = first_token.pos_ in ["ADP", "PART", "VERB"]
         is_adj_or_adv = any(t.pos_ in ["ADJ", "ADV"] for t in doc)
         has_noun = any(t.pos_ in ["NOUN", "PROPN"] for t in doc)
 
-        # 2. ROUTING
         if is_activity_indicator:
-            # "do spania", "for sleep", "biegać"
             search_scope = "ACTIVITY_ONLY"
         elif is_adj_or_adv and not has_noun:
-            # "szybka", "głośno", "wolno" (bez rzeczownika typu 'tempo')
             search_scope = "AUDIO_ONLY"
         else:
-            # "tempo", "sen", "bas", "malowanie", "wysoka energia"
             search_scope = "BOTH"
 
-        # 3. WYSZUKIWANIE
         best_audio_key, best_audio_val, best_audio_score = None, None, 0.0
         best_act_key, best_act_score = None, 0.0
 
-        # Szukamy w Audio
         if search_scope in ["AUDIO_ONLY", "BOTH"]:
             for feat, embs in AUDIO_INDEX.items():
                 sims = cosine_similarity(context_vec, embs)[0]
@@ -837,7 +675,6 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
                     best_audio_key = feat
                     best_audio_val = FEATURE_DESCRIPTIONS[feat][idx][0]
 
-        # Szukamy w Activity
         if search_scope in ["ACTIVITY_ONLY", "BOTH"]:
             for group, embs in ACTIVITY_INDEX.items():
                 sims = cosine_similarity(context_vec, embs)[0]
@@ -846,7 +683,6 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
                     best_act_score = mx
                     best_act_key = group
 
-        # 4. WERDYKT (Max Pooling / Turniej)
         winner_type = None
         final_score = 0.0
 
@@ -855,13 +691,11 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
         elif search_scope == "ACTIVITY_ONLY":
             winner_type = 'ACTIVITY'; final_score = best_act_score
         else:
-            # TURNIEJ DLA "BOTH": Wygrywa wyższy confidence
             if best_audio_score > best_act_score:
                 winner_type = 'AUDIO'; final_score = best_audio_score
             else:
                 winner_type = 'ACTIVITY'; final_score = best_act_score
 
-        # Dodawanie do tymczasowych list wyników
         if winner_type == 'AUDIO':
             print(f"[MATCH:AUDIO] '{phrase}' -> feature: {best_audio_key} (score: {final_score:.4f})")
             found_explicit_audio.append((best_audio_key, best_audio_val, final_score))
@@ -869,17 +703,14 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
             print(f"[MATCH:ACTIVITY] '{phrase}' -> category: {best_act_key} (score: {final_score:.4f})")
             found_activities.append((best_act_key, final_score))
 
-    # 5. ŁĄCZENIE (MERGE) - Audio ma priorytet przy konfliktach
     merged = {}
 
-    # KROK A: Presety aktywności (baza)
-    found_activities.sort(key=lambda x: x[1]) # od najsłabszej do najsilniejszej
+    found_activities.sort(key=lambda x: x[1])
     for group, score in found_activities:
         if group in ACTIVITY_GROUPS:
             for r_feat, r_val in ACTIVITY_GROUPS[group]['rules']:
                 merged[r_feat] = {'value': r_val, 'confidence': float(score)}
 
-    # KROK B: Cechy audio (nadpisują bazę, jeśli są silniejsze)
     for feat, val, score in found_explicit_audio:
         if feat not in merged or score > merged[feat]['confidence']:
             if feat in merged:
@@ -897,111 +728,57 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
     return sorted([(k, v) for k, v in merged.items()], key=lambda x: x[1]['confidence'], reverse=True)
 
 
-# ==========================================
-# INTERAKCJA Z BAZĄ DANYCH (SQL) - MP
-# ==========================================
 
-def search_tags_in_db(phrases: list[str], db: Session, model, threshold=None):
-    """
-    Wyszukuje semantycznie podobne tagi w bazie danych przy użyciu wektorów (embeddings).
-    Funkcja zamienia podane frazy tekstowe na wektory liczbowe przy użyciu modelu AI,
-    a następnie wykonuje zapytanie SQL (pgvector), aby znaleźć najbliższe pasujące tagi
-    w tabeli `tags_unique`.
-    Args:
-        phrases (list[str]): Lista fraz tekstowych do wyszukania (np. ['szybki rock', 'do biegania']).
-        db (Session): Aktywna sesja bazy danych SQLAlchemy.
-        model (SentenceTransformer): Załadowany model embeddingów (musi posiadać metodę .encode).
-        threshold (float, optional): Minimalny próg podobieństwa (0.0 - 1.0).
-                                     Jeśli None, pobierana jest wartość z konfiguracji.
-    Returns:
-        dict[str, float]: Słownik, gdzie kluczem jest nazwa znalezionego tagu,
-                          a wartością stopień podobieństwa (similarity score).
-    """
+#  MP-------------------------------------------------------------------------------
 
+def map_phrases_to_tags(phrases, threshold=None):
     if threshold is None:
         threshold = EXTRACTION_CONFIG["tag_similarity_threshold"]
 
+    if not phrases or TAG_VECS is None or len(TAG_VECS) == 0:
+        return {}
+
+    print(f"[ENGINE] Mapowanie w RAM (NumPy): {phrases}")
+
+    q_vecs = model_e5.encode([f"query: {p}" for p in phrases], convert_to_numpy=True, normalize_embeddings=True)
+
+    sims = cosine_similarity(TAG_VECS, q_vecs)
     found_tags = {}
-    if not phrases: return found_tags
-
-    # Zamiana tekstu na liczby (embeddingi)
-    queries = [f"query: {p}" for p in phrases]
-    embeddings = model.encode(queries, normalize_embeddings=True)
-
-    print(f"\n[SQL SEARCH] Szukam tagów dla: {phrases}")
 
     for i, phrase in enumerate(phrases):
-        vec = embeddings[i].tolist()
+        col = sims[:, i]
+        best_idx = np.argmax(col)
+        best_score = float(col[best_idx])
+        best_tag = TAGS_LIST[best_idx]
 
-        # Zapytanie SQL: Znajdź najbliższy wektor (operator <=>)
-        # 1 - dystans = podobieństwo
-        sql = text("""
-            SELECT name, 1 - (tag_embedding <=> :vec) as similarity
-            FROM tags_unique
-            WHERE tag_embedding IS NOT NULL
-            ORDER BY tag_embedding <=> :vec ASC
-            LIMIT 1
-        """)
-
-        try:
-            result = db.execute(sql, {"vec": str(vec)}).fetchone()
-            if result:
-                tag_name, similarity = result
-                # Jeśli podobieństwo jest wystarczająco duże -> Mamy to!
-                if similarity >= threshold:
-                    print(f"   MATCH: '{phrase}' -> Tag '{tag_name}' ({similarity:.3f})")
-                    if tag_name in found_tags:
-                        found_tags[tag_name] = max(found_tags[tag_name], similarity)
-                    else:
-                        found_tags[tag_name] = similarity
-                else:
-                    print(f"   MISS: '{phrase}' (Najbliższy: '{tag_name}' - {similarity:.3f} < {threshold})")
-        except Exception as e:
-            print(f"   ERROR SQL: {e}")
+        if best_score >= threshold:
+            print(f"   MATCH: '{phrase}' -> '{best_tag}' ({best_score:.3f})")
+            found_tags[best_tag] = max(found_tags.get(best_tag, 0), best_score)
 
     return found_tags
 
 
+
+def search_tags_in_db(phrases, db=None):
+    return map_phrases_to_tags(phrases)
+
+
 def get_query_tag_weights(raw_tags):
-    """
-    Normalizuje wagi tagów tak, aby ich suma wynosiła 1.0.
-    Służy do przygotowania zbalansowanego profilu zapytania, gdzie tagi o wyższym
-    raw score mają większy wpływ, ale całość jest skalowana do jedności.
-    Args:
-        raw_tags (dict[str, float]): Słownik z surowymi wynikami podobieństwa {tag: score}.
-    Returns:
-        dict[str, float]: Słownik z tymi samymi kluczami, ale znormalizowanymi wartościami.
-    """
+
     s = sum(raw_tags.values())
     if s <= 0: return raw_tags
     return {t: v / s for t, v in raw_tags.items()}
 
 
 def fetch_candidates_from_db(tag_scores: dict[str, float], db: Session, limit: int = None) -> pd.DataFrame:
-    """
-    Pobiera z bazy danych utwory pasujące do znalezionych tagów i konwertuje je na DataFrame.
-    Jeśli lista tagów jest pusta, funkcja wykonuje 'fallback' i pobiera najpopularniejsze
-    utwory z bazy. Dla każdego pobranego utworu obliczany jest wstępny `tag_score`
-    na podstawie wag przekazanych w `tag_scores`.
-    Args:
-        tag_scores (dict[str, float]): Słownik wag tagów {nazwa_tagu: waga}.
-        db (Session): Aktywna sesja bazy danych.
-        limit (int, optional): Maksymalna liczba utworów do pobrania.
-                               Domyślnie bierze z RETRIEVAL_CONFIG.
-    Returns:
-        pd.DataFrame: Tabela z kandydatami zawierająca kolumny m.in.:
-                      spotify_id, name, artist, popularity, audio features, tag_score.
-                      Zwraca pusty DataFrame, jeśli nie znaleziono utworów.
-    """
+
     if limit is None:
         limit = RETRIEVAL_CONFIG["n_candidates"]
 
-    # 1. Jeśli nie znaleziono żadnych tagów -> Pobierz hity (Popularne)
     if not tag_scores:
         print("[DB FETCH] Brak tagów. Pobieram popularne utwory (Fallback).")
         songs = db.query(models.Song).order_by(models.Song.popularity.desc()).limit(200).all()
     else:
-        # 2. Jeśli są tagi -> Pobierz utwory pasujące do tagów
         tags_list = list(tag_scores.keys())
         print(f"[DB FETCH] Pobieram utwory dla tagów: {tags_list}")
 
@@ -1013,12 +790,10 @@ def fetch_candidates_from_db(tag_scores: dict[str, float], db: Session, limit: i
     if not songs:
         return pd.DataFrame()
 
-    # 3. Konwersja na DataFrame (Tylko potrzebne kolumny!)
     data = []
-    q_pow = SCORING_CONFIG.get("query_pow", 1.0)
+    q_pow = SCORING_CONFIG["query_pow"]
 
     for s in songs:
-        # Obliczanie prostego score dla tagów w locie
         current_score = 0.0
         song_tag_names = {t.name for t in s.tags}
 
@@ -1026,7 +801,6 @@ def fetch_candidates_from_db(tag_scores: dict[str, float], db: Session, limit: i
             if t_name in song_tag_names:
                 current_score += (t_weight ** q_pow)
 
-        # Bezpieczne rzutowanie typów (SQLAlchemy czasem zwraca Decimal)
         data.append({
             "spotify_id": s.spotify_id,
             "name": s.name,
@@ -1045,11 +819,9 @@ def fetch_candidates_from_db(tag_scores: dict[str, float], db: Session, limit: i
 
     df = pd.DataFrame(data)
 
-    # Normalizacja wyników tagów (0.0 - 1.0)
     if not df.empty and df['tag_score'].max() > 0:
         df['tag_score'] /= df['tag_score'].max()
 
-    # Inicjalizacja głównego score
     if not df.empty:
         df['score'] = df['tag_score']
 
@@ -1059,25 +831,6 @@ def fetch_candidates_from_db(tag_scores: dict[str, float], db: Session, limit: i
 
 
 def calculate_audio_match(candidates_df, audio_criteria):
-    """
-    Oblicza stopień dopasowania kandydatów do zadanych kryteriów audio (np. energy, danceability).
-    Stosuje podejście iloczynowe: ocena końcowa to iloczyn dopasowań dla poszczególnych cech.
-
-    Logika:
-    1. Dla każdego kryterium obliczany jest dystans: |wartość_utworu - wartość_docelowa|.
-    2. Dystans zamieniany jest na podobieństwo: 1.0 - dystans.
-    3. Wyniki cząstkowe są mnożone (utwór musi być bliski wszystkim kryteriom naraz).
-
-    Args:
-        candidates_df (pd.DataFrame): DataFrame z utworami. Musi zawierać kolumny odpowiadające
-            nazwom cech w audio_criteria (np. 'energy', 'tempo').
-        audio_criteria (List[Tuple[str, Dict[str, float]]]): Lista krotek z kryteriami.
-            Format: [('energy', {'value': 0.8, ...}), ('danceability', {'value': 0.5})].
-
-    Returns:
-        np.ndarray: Wektor o długości równej liczbie wierszy w candidates_df,
-        zawierający wartości zmiennoprzecinkowe z zakresu 0.0 - 1.0.
-    """
     if candidates_df.empty:
         return np.array([])
 
@@ -1089,12 +842,10 @@ def calculate_audio_match(candidates_df, audio_criteria):
     for feature_name, criteria in audio_criteria:
         val_data = criteria['value']
 
-        # ZABEZPIECZENIE:
-        # Sprawdzamy czy w konfiguracji jest liczba (stara wersja) czy krotka/lista (nowa wersja)
+
         if isinstance(val_data, (list, tuple)):
             target_min, target_max = val_data
         else:
-            # Jeśli user podał jedną liczbę, traktujemy to jako punkt (min=max)
             target_min = target_max = float(val_data)
 
         if feature_name not in candidates_df.columns:
@@ -1102,21 +853,13 @@ def calculate_audio_match(candidates_df, audio_criteria):
 
         song_values = candidates_df[feature_name].to_numpy()
 
-        # === NOWA LOGIKA MATEMATYCZNA ===
 
-        # 1. Obliczamy o ile wartość jest ZA MAŁA (poniżej min)
-        # Jeśli piosenka ma 0.5, a min to 0.7 -> diff = 0.2
-        # Jeśli piosenka ma 0.75, a min to 0.7 -> diff = -0.05 -> bierzemy 0 (bo maximum(0, ...))
         dist_below = np.maximum(0, target_min - song_values)
 
-        # 2. Obliczamy o ile wartość jest ZA DUŻA (powyżej max)
-        # Jeśli piosenka ma 0.9, a max to 0.8 -> diff = 0.1
         dist_above = np.maximum(0, song_values - target_max)
 
-        # 3. Sumujemy dystans (zawsze jedna z tych wartości będzie zerem, albo obie jeśli trafiliśmy w środek)
         total_dist = dist_below + dist_above
 
-        # 4. Zamieniamy na podobieństwo (1.0 - dystans)
         sim = np.clip(1.0 - total_dist, 0.0, 1.0)
 
         total_audio_score *= sim
@@ -1125,21 +868,11 @@ def calculate_audio_match(candidates_df, audio_criteria):
 
 
 def merge_tag_and_audio_scores(df, audio_weight=0.3, use_tags=True):
-    '''
-    input: df (pd.DataFrame) - tabela kandydatów, audio_weight (float) - waga dla audio (0.0-1.0), use_tags (bool) - czy uwzględniać tagi
-    output: pd.DataFrame - tabela z nową kolumną 'score', posortowana malejąco od najlepszego dopasowania
-    description: Agreguje wyniki z dwóch źródeł: dopasowania semantycznego (tagi) i dopasowania technicznego (audio).
-                 Oblicza średnią ważoną obu wyników. Zawiera mechanizm "fallback": jeśli nie znaleziono tagów (use_tags=False),
-                 cała waga oceny (100%) jest automatycznie przenoszona na dopasowanie audio, aby uniknąć błędów w rankingu.
-    '''
     df = df.copy()
-    # Jeśli nie ma tagów, waga Audio to 100% (1.0), inaczej bierzemy z configu
     w = audio_weight if use_tags else 1.0
 
-    # Liczymy score (safe get zabezpiecza przed brakiem kolumn)
     df['score'] = (df.get('tag_score', 0) * (1 - w)) + (df.get('audio_score', 0) * w)
 
-    # Uzupełniamy braki zerami tylko dla estetyki wyświetlania
     for col in ['tag_score', 'audio_score']:
         if col not in df: df[col] = 0.0
 
@@ -1148,21 +881,7 @@ def merge_tag_and_audio_scores(df, audio_weight=0.3, use_tags=True):
 
 
 def tier_by_score(candidates: pd.DataFrame, t_high: float, t_mid: float):
-    """
-    Dzieli kandydatów na trzy poziomy jakości (tiery) w zależności od wartości dopasowania (score).
 
-    - Tier A: score >= t_high - bardzo dobre dopasowanie
-    - Tier B: t_mid <= score < t_high - średnie dopasowanie
-    - Tier C: score < t_mid - słabe dopasowanie
-
-    Args:
-        candidates (pd.DataFrame): Dane z kolumną 'score'.
-        t_high (float): Próg dla wysokiego dopasowania.
-        t_mid (float): Próg dla średniego dopasowania.
-
-    Returns:
-        tuple: (tier_a, tier_b, tier_c) — trzy DataFramey z podziałem wg jakości.
-    """
     tier_a = candidates[candidates["score"] >= t_high].copy()
     tier_b = candidates[(candidates["score"] < t_high) & (candidates["score"] >= t_mid)].copy()
     tier_c = candidates[candidates["score"] < t_mid].copy()
@@ -1172,39 +891,14 @@ def tier_by_score(candidates: pd.DataFrame, t_high: float, t_mid: float):
 
 
 def calculate_dynamic_thresholds(candidates_df, high_threshold=0.75, mid_threshold=0.5):
-    """
-    Wylicza adaptacyjne progi punktowe (t_high, t_mid) służące do podziału wyników na Tiery (np. A i B).
 
-    Logika łączy podejście względne (relative) z bezwzględnym (absolute):
-    1. Podejście względne: Próg dostosowuje się do najlepszego wyniku w danej puli (max_score).
-       Jeśli mamy świetne dopasowania (np. 0.95), próg Tier A rośnie (np. do 0.85), aby wybrać tylko "śmietankę".
-    2. Podejście bezwzględne (Quality Gate): Próg nigdy nie spadnie poniżej ustalonego minimum (high_threshold).
-       Jeśli najlepszy wynik to tylko 0.6, a high_threshold to 0.75, to t_high wyniesie 0.75.
-       W efekcie Tier A pozostanie pusty, co jest pożądanym zachowaniem (nie pokazujemy słabych wyników jako "świetne").
-
-    Args:
-        candidates_df (pd.DataFrame): DataFrame z kandydatami, musi zawierać kolumnę 'score'.
-        high_threshold (float, optional): Minimalna wartość bezwzględna dla Tier A. Domyślnie 0.75.
-        mid_threshold (float, optional): Minimalna wartość bezwzględna dla Tier B. Domyślnie 0.5.
-
-    Returns:
-        Tuple[float, float]: Krotka zawierająca wyliczone progi (t_high, t_mid).
-    """
     if candidates_df.empty:
         return 0.0, 0.0
 
-    # Jaki jest absolutnie najlepszy wynik dla tego zapytania?
     max_score = candidates_df['score'].max()
 
-    # LOGIKA ADAPTACYJNA
-
-    # 1. Tier A: Musi być blisko lidera (np. max - 0.1),
-    #    ale nie może być mniejszy niż 0.75.
-    #    Jeśli max_score to 0.5, to t_high będzie 0.75 -> Tier A będzie pusty
     t_high = max(high_threshold, max_score - 0.1)
 
-    # 2. Tier B: Musi być sensowny (np. max - 0.3),
-    #    ALE nie mniejszy niż 0.4 (żeby nie brać śmieci).
     t_mid = max(mid_threshold, max_score - 0.2)
 
     return t_high, t_mid
@@ -1219,73 +913,38 @@ def build_working_set(
     min_required_size: int,
     popularity_rescue_ratio: float = 0.2
 ) -> pd.DataFrame:
-    """
-    Buduje zbiór roboczy.
-    Ważne: Przy dobieraniu z Tier B, dba o to, aby nie wziąć tylko niszowych utworów z dobrym score,
-    ale też "uratować" popularne utwory, które mają przyzwoity score (są w Tier B).
-    Args:
-        tier_a (pd.DataFrame): Utwory o wysokim dopasowaniu (Hity jakościowe).
-                               Bierzemy je zawsze w całości.
-        tier_b (pd.DataFrame): Utwory o średnim dopasowaniu (Dobre, ale nie idealne).
-                               Służą do uzupełnienia puli do `target_pool_size`.
-        tier_c (pd.DataFrame): Utwory o niskim dopasowaniu (Słabe).
-                               Używane tylko awaryjnie, jeśli nie osiągniemy `min_required_size`.
-        target_pool_size (int): Docelowa wielkość zbioru roboczego (np. 50-100).
-                                Tyle kandydatów chcemy dać algorytmowi losującemu,
-                                aby miał swobodę w dobieraniu High/Mid/Low popularity.
-        min_required_size (int): ABSOLUTNE MINIMUM. Tyle piosenek ma mieć finalna playlista.
-                                 Jeśli A+B to za mało, dobierzemy stąd resztę z Tier C.
-                                 Zalecane: tyle, ile user zażądał (np. 15).
-        popularity_rescue_ratio (float): Jaka część slotów z Tieru B ma być zarezerwowana
-                                         dla utworów NAJPOPULARNIEJSZYCH (zamiast tych z najlepszym score).
-                                         Np. 0.3 oznacza, że 30% dobieranych utworów z B to hity,
-                                         a 70% to najlepiej pasujące niszowe.
-    """
 
-    # 1. zawsze bierzemy całe Tier A
     working_parts = [tier_a]
     current_count = len(tier_a)
 
-    # Jeśli mamy mniej kandydatów niż wynosi cel (target_pool_size), bierzemy z Tier B.
     if current_count < target_pool_size:
         needed = target_pool_size - current_count
 
-        # Gdy Tier B jest mały, bierzemy całość
         if len(tier_b) <= needed:
             working_parts.append(tier_b)
             current_count += len(tier_b)
-        # Gdy tier B jest duży, musimy wybierać.
         else:
-            # Slot dla wysokich popularity
             n_pop = int(needed * popularity_rescue_ratio)
-            # Slot dla najlepszego dopasowania semantycznego (Score)
             n_score = needed - n_pop
 
-            # Wybieramy najpopularniejsze z dostępnych w Tier B
             b_pop_rescued = tier_b.sort_values("popularity", ascending=False).head(n_pop)
-            # Usuwamy wybrane hity z puli, aby ich nie zduplikować
             remaining_b = tier_b.drop(b_pop_rescued.index)
-            # Dobieramy resztę na podstawie czystego wyniku (score)
             b_score_top = remaining_b.sort_values("score", ascending=False).head(n_score)
 
             working_parts.extend([b_pop_rescued, b_score_top])
             current_count += (len(b_pop_rescued) + len(b_score_top))
 
-    # Sprawdzamy, czy osiągnęliśmy absolutne minimum wymagane przez użytkownika (np. 15 piosenek na playlistę).
-    # Jeśli nie, musimy sięgnąć po "słabsze" utwory, bo lepiej dać cokolwiek niż pustą playlistę.
+
     if current_count < min_required_size:
         needed = min_required_size - current_count
         part_c = tier_c.sort_values("score", ascending=False).head(needed)
         working_parts.append(part_c)
 
-    # Zabezpieczenie na wypadek pustych wszystkich Tierów
     if not working_parts:
         return pd.DataFrame(columns=tier_a.columns)
 
-    # Sklejamy
     working = pd.concat(working_parts, ignore_index=True)
 
-    # Ustalamy po czym identyfikujemy piosenkę.
     subset_cols = []
 
     if 'id' in working.columns:
@@ -1298,7 +957,6 @@ def build_working_set(
     else:
         pass
 
-    # Finalne sortowanie
     working = working.sort_values("score", ascending=False).reset_index(drop=True)
 
     return working
@@ -1306,21 +964,6 @@ def build_working_set(
 
 
 def bucket_by_popularity(working: pd.DataFrame, p_high: int, p_mid: int):
-    """
-    Dzieli utwory na trzy grupy (bucket'y) według ich popularności.
-
-    - High:  popularity >= p_high
-    - Mid:   p_mid <= popularity < p_high
-    - Low:   popularity < p_mid
-
-    Args:
-        working (pd.DataFrame): Zbiór roboczy utworów z kolumną 'popularity'.
-        p_high (int): Próg dla wysokiej popularności.
-        p_mid (int): Próg dla średniej popularności.
-
-    Returns:
-        tuple: (pop_high, pop_mid, pop_low) — trzy DataFrame'y z podziałem wg popularności.
-    """
 
     pop_high = working[working["popularity"] >= p_high].copy()
     pop_mid = working[(working["popularity"] < p_high) & (working["popularity"] >= p_mid)].copy()
@@ -1330,25 +973,7 @@ def bucket_by_popularity(working: pd.DataFrame, p_high: int, p_mid: int):
 
 
 def weighted_sample(df: pd.DataFrame, k: int, alpha: float):
-    """
-    Losuje `k` wierszy z DataFrame bez zwracania, faworyzując utwory z wyższym 'score'.
-    Prawdopodobieństwo wylosowania utworu jest proporcjonalne do: (score ^ alpha).
 
-    Rola parametru alpha (temperatura losowania):
-    - alpha > 1 (np. 3.0): Strategia "Greedy" (chciwa). Bardzo mocno faworyzuje utwory z najwyższym wynikiem.
-      Szansa na wylosowanie słabszych utworów drastycznie maleje.
-    - alpha = 1.0: Prawdopodobieństwo liniowo zależne od wyniku.
-    - alpha < 1 (np. 0.5): Spłaszczenie różnic. Słabsze utwory mają większą szansę zaistnieć.
-    - alpha = 0: Losowanie jednostajne (każdy utwór ma taką samą szansę, ignorujemy score).
-
-    Args:
-        df (pd.DataFrame): Tabela z kandydatami (musi zawierać kolumnę 'score').
-        k (int): Liczba utworów do wylosowania.
-        alpha (float): Współczynnik skalowania wag (wykładnik potęgi).
-
-    Returns:
-        pd.DataFrame: Podzbiór `df` zawierający `k` wylosowanych wierszy.
-    """
     if k <= 0 or len(df) == 0:
         return df.iloc[0:0]
 
@@ -1373,41 +998,14 @@ def sample_final_songs(
     popularity_cfg: dict,
     sampling_cfg: dict,
 ) -> pd.DataFrame:
-    """
-    Dokonuje finalnego wyboru utworów do playlisty z przygotowanej "puli roboczej" (working set).
-    Stosuje zaawansowaną strategię mieszania popularności (Popularity Mix) oraz ważonego losowania (Weighted Sampling).
 
-    Strategia:
-    1. Forced Popular (Kotwice): Gwarantuje obecność znanych hitów (np. 2-3 utwory), aby użytkownik czuł się bezpiecznie.
-       Stosuje losowanie ważone, aby nie grać w kółko tych samych 5 najpopularniejszych piosenek
-    2. Popularity Buckets: Dzieli resztę miejsc wg proporcji (np. 40% High, 40% Mid, 20% Low/Discovery).
-    3. Weighted Audio/Tag Score: Wewnątrz każdego bucketa utwory są losowane z prawdopodobieństwem zależnym od ich dopasowania
-       do zapytania (score). Dzięki temu playlista trzyma klimat (audio/tagi), ale jest różnorodna.
-
-    Args:
-        working (pd.DataFrame): Pula kandydatów (zbiór roboczy) z kolumnami 'score' i 'popularity'.
-        popularity_cfg (Dict[str, Any]): Konfiguracja popularności.
-            - 'p_high', 'p_mid' (int): Progi punktowe podziału na buckety.
-            - 'mix' (dict): Proporcje (np. {'high': 0.4, 'mid': 0.4, 'low': 0.2}).
-            - 'forced_popular' (int): Liczba gwarantowanych hitów na start.
-            - 'forced_popular_min' (int): Minimalna popularność, by utwór uznano za "hit" do sekcji forced.
-        sampling_cfg (Dict[str, Any]): Konfiguracja losowania.
-            - 'final_n' (int): Docelowa długość playlisty.
-            - 'alpha' (float): "Temperatura" losowania. Im wyższa, tym bardziej faworyzujemy utwory z wysokim score.
-            - 'shuffle' (bool): Czy przetasować finalną listę (True) czy zostawić posortowaną po score (False/Debug).
-
-    Returns:
-        pd.DataFrame: Gotowa playlista o długości `final_n` (lub mniejszej, jeśli brakło kandydatów).
-    """
 
     if len(working) == 0:
         return working.iloc[0:0].copy()
 
-    # Konfiguracja
     final_n = sampling_cfg.get("final_n", 15)
-    alpha   = sampling_cfg.get("alpha", 2.0) # Siła wpływu score na losowanie
+    alpha   = sampling_cfg.get("alpha", 2.0)
 
-    # Gdy chcemy mało piosenek, po prostu zwracamy losowe kilka bez podziału na buckety
     if final_n < 3:
         return weighted_sample(working, final_n, alpha)
 
@@ -1421,23 +1019,17 @@ def sample_final_songs(
 
 
 
-    # 1. Bucketowanie po popularności
+
     pop_high, pop_mid, pop_low = bucket_by_popularity(working, p_high=p_high, p_mid=p_mid)
 
     final_parts = []
 
-    # 2. Forced popular
-    # Wybieramy pulę bardzo popularnych utworów (powyżej forced_popular_min)
-    # Zazwyczaj to podzbiór pop_high
     forced_pool = working[working["popularity"] >= forced_popular_min].copy()
 
-    # Zamiast brać top N na sztywno, losujemy z nich, preferując te z wyższym score.
-    # Dzięki temu playlista jest bardziej różnorodna przy kolejnych wywołaniach.
     forced_taken = weighted_sample(forced_pool, forced_popular, alpha)
 
     final_parts.append(forced_taken)
 
-    # Usuwamy wybrane utwory z bucketów, żeby ich nie dublować
     used_idx = set(forced_taken.index)
     pop_high = pop_high[~pop_high.index.isin(used_idx)]
     pop_mid  = pop_mid[~pop_mid.index.isin(used_idx)]
@@ -1448,8 +1040,6 @@ def sample_final_songs(
     print(f"   -> Mid Pop  (>={p_mid}):  {len(pop_mid)} utworów", flush=True)
     print(f"   -> Low Pop  (<{p_mid}):   {len(pop_low)} utworów", flush=True)
 
-
-    # 3. Obliczamy ile slotów zostało do wypełnienia
     n_forced = len(forced_taken)
     remaining = max(0, final_n - n_forced)
 
@@ -1457,18 +1047,14 @@ def sample_final_songs(
         combined = pd.concat(final_parts, ignore_index=False)
         return combined.sort_values("score", ascending=False).reset_index(drop=True)
 
-    # 4. Wyliczamy cele dla bucketów (Mix)
     target_high = int(round(remaining * mix.get("high", 0.0)))
     target_mid  = int(round(remaining * mix.get("mid",  0.0)))
-    target_low  = remaining - target_high - target_mid  # Reszta do low
+    target_low  = remaining - target_high - target_mid
 
-    # Clamp (nie możemy wziąć więcej niż jest w buckecie)
     target_high = min(target_high, len(pop_high))
     target_mid  = min(target_mid, len(pop_mid))
     target_low  = min(target_low, len(pop_low))
 
-    # 5. Główne losowanie z bucketów (Weighted Sample wg Score)
-    # Piosenki, które lepiej pasują (wyższy score), mają większą szansę na wylosowanie.
     sampled_high = weighted_sample(pop_high, target_high, alpha)
     sampled_mid  = weighted_sample(pop_mid,  target_mid,  alpha)
     sampled_low  = weighted_sample(pop_low,  target_low,  alpha)
@@ -1477,26 +1063,36 @@ def sample_final_songs(
 
     combined = pd.concat(final_parts, ignore_index=False)
 
-    # 6. Fill Gaps (Jeśli zaokrąglenia albo braki w bucketach sprawiły, że mamy za mało)
     if len(combined) < final_n:
         missing = final_n - len(combined)
         used_idx = set(combined.index)
 
-        # Bierzemy resztki z całego working setu
         remaining_pool = working[~working.index.isin(used_idx)]
         extra = weighted_sample(remaining_pool, missing, alpha)
 
         combined = pd.concat([combined, extra], ignore_index=False)
 
-    # 6. finalne tasowanie
-    # frac=1 - "weź 100% wierszy, ale w losowej kolejności"
     do_shuffle = sampling_cfg.get("shuffle", True)
     if do_shuffle:
         combined = combined.sample(frac=1).reset_index(drop=True)
     else:
-        # do debugowania: najlepsze na górze
         combined = combined.sort_values("score", ascending=False).reset_index(drop=True)
 
     return combined
 
 
+def tier_by_score(candidates: pd.DataFrame, t_high: float, t_mid: float):
+    tier_a = candidates[candidates["score"] >= t_high].copy()
+    tier_b = candidates[(candidates["score"] < t_high) & (candidates["score"] >= t_mid)].copy()
+    tier_c = candidates[candidates["score"] < t_mid].copy()
+    return tier_a, tier_b, tier_c
+
+
+
+def calculate_dynamic_thresholds(candidates_df, high_threshold=0.75, mid_threshold=0.5):
+    if candidates_df.empty:
+        return 0.0, 0.0
+    max_score = candidates_df['score'].max()
+    t_high = max(high_threshold, max_score - 0.1)
+    t_mid = max(mid_threshold, max_score - 0.2)
+    return t_high, t_mid
