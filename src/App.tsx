@@ -3,7 +3,7 @@ import InputSection from "./components/layout/InputSection.tsx";
 import PlaylistSection, { PlaylistItem } from "./components/playlist/PlaylistSection.tsx";
 import { useState, useRef, useEffect } from "react";
 import SpotifyAuth from "./components/playlist/SpotifyAuth.tsx";
-import { generatePlaylist, formatDuration } from "./services/api.ts";
+import { generatePlaylist, formatDuration, extractImageUrl } from "./services/api.ts";
 import { usePlaylistOperations } from "./hooks/usePlaylistOperations.ts";
 import { generatePlaylistItemId } from "./utils/generateId.ts";
 function App() {
@@ -37,7 +37,7 @@ function App() {
                 title: track.name,
                 artist: track.artist || 'Unknown Artist',
                 duration: formatDuration(track.duration_ms),
-                image: track.album_images,
+                image: extractImageUrl(track.album_images),    // Parsuj JSON i wyciągnij URL
             }));
 
             setPlaylistItems(playlistItems);
