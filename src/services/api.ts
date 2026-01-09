@@ -161,6 +161,31 @@ export const formatDuration = (durationMs: number): string => {
 };
 
 /**
+ * Wyciąga URL obrazka z pola album_images (które jest stringiem JSON)
+ * Backend zwraca: '[{"url": "https://...", "width": 640, "height": 640}]'
+ */
+export const extractImageUrl = (albumImages: string | null | undefined): string | null => {
+    if (!albumImages) return null;
+
+    try {
+        if (albumImages.startsWith('http')) {
+            return albumImages;
+        }
+
+        const parsed = JSON.parse(albumImages);
+
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed[0]?.url || null;
+        }
+
+        return null;
+    } catch (error) {
+        console.warn('Failed to parse album_images:', albumImages, error);
+        return null;
+    }
+};
+
+/**
  * Eksportuje playlistę do Spotify
  */
 export interface ExportPlaylistRequest {

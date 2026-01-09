@@ -1,6 +1,6 @@
 ﻿import { useState, useCallback } from 'react';
 import { PlaylistItem } from '../components/playlist/PlaylistSection';
-import { replaceSong, formatDuration } from '../services/api';
+import { replaceSong, formatDuration, extractImageUrl } from '../services/api';
 
 /**
  * Custom hook do zarządzania operacjami na playliście
@@ -32,7 +32,7 @@ export const usePlaylistOperations = () => {
                 title: track.name,
                 artist: track.artist || 'Unknown Artist',
                 duration: formatDuration(track.duration_ms),
-                image: track.album_images,
+                image: extractImageUrl(track.album_images),
             };
 
             onSuccess(updatedItem);
@@ -73,7 +73,7 @@ export const usePlaylistOperations = () => {
                 title: track.name,
                 artist: track.artist || 'Unknown Artist',
                 duration: formatDuration(track.duration_ms),
-                image: track.album_images,
+                image: extractImageUrl(track.album_images),
             };
 
             onSuccess(newItem);
