@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Central export point for all types
  * Import types from here for consistency
  */
