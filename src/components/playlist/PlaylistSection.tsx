@@ -1,4 +1,4 @@
-﻿import {memo} from 'react';
+import {memo} from 'react';
 import type { PlaylistItem } from '../../types';
 import {
     DndContext,
