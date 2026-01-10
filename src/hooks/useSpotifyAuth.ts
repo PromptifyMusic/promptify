@@ -60,7 +60,8 @@ export const useSpotifyAuth = (): UseSpotifyAuthReturn => {
                     message = 'Nie otrzymano kodu autoryzacyjnego od Spotify. Spróbuj ponownie.';
                     break;
                 default:
-                    message = 'Nieznany błąd podczas autoryzacji. Sprawdź logi backendu.';
+                    message = 'Wystąpił błąd podczas autoryzacji Spotify.';
+                    break;
             }
 
             setErrorMessage(message);
