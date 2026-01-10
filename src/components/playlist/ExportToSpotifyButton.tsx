@@ -1,4 +1,4 @@
-﻿import { memo, useState } from 'react';
+import { memo, useState } from 'react';
 import { Music2, ExternalLink, CheckCircle } from 'lucide-react';
 import ActionButton from '../shared/ActionButton.tsx';
 import type { PlaylistItem } from '../../types';
