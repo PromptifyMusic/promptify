@@ -801,9 +801,6 @@ def fetch_candidates_from_db(
 
         for feat_name, data in audio_constraints:
 
-            if data['confidence'] < 0.6:
-                continue
-
             target_range = data['value']
 
             if isinstance(target_range, (list, tuple)):
