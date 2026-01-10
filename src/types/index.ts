@@ -17,8 +17,6 @@ export type {
 // Playlist Types
 export type {
   PlaylistItem,
-  PlaylistState,
-  PlaylistAction,
 } from './playlist.types';
 
 // Spotify Types

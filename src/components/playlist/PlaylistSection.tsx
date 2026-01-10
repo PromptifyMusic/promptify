@@ -28,8 +28,8 @@ import ExportToSpotifyButton from './ExportToSpotifyButton.tsx';
 interface PlaylistSectionProps {
     isExpanded: boolean;
     playlistItems: PlaylistItem[];
-    regeneratingItems: Set<string>;
-    deletingItems: Set<string>;
+    regeneratingItems: ReadonlySet<string>;
+    deletingItems: ReadonlySet<string>;
     initialQuantity: number;
     isAddingItem: boolean;
     playlistName?: string;
