@@ -1,4 +1,4 @@
-﻿import DarkVeil from "./components/layout/animatedBackground/DarkVeil";
+import DarkVeil from "./components/layout/animatedBackground/DarkVeil";
 import SpotifyAuth from "./components/playlist/SpotifyAuth";
 import { PlaylistProvider } from "./context/PlaylistContext";
 import { InputSectionContainer } from "./components/containers/InputSectionContainer";
