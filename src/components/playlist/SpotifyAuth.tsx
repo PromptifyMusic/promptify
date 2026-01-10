@@ -15,7 +15,6 @@ const SpotifyAuth = memo(() => {
         );
     }
 
-    // Jeśli jest błąd, pokaż komunikat
     if (errorMessage) {
         return (
             <div className="spotify-auth-button spotify-auth-button--error">

@@ -50,7 +50,9 @@ WORKSET_CONFIG = {
     "min_absolute_mid": 0.50,
 
     "target_pool_size": 100,
-    "min_required_size": 15,
+    # This does not seem to work as intended. It seems to me that its value sets max size rather than min size.
+    # Value set to 50 as temporary workaround. (50 is max size of the playlist I set on frontend)
+    "min_required_size": 50,
 
     "popularity_rescue_ratio": 0.2,
 }

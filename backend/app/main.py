@@ -151,7 +151,6 @@ def search_songs(
         request: schemas.SearchRequest,
         # text: str = Query(..., description="Prompt użytkownika"),
         # ilosc: int = Query(15, alias="top_n", ge=1, le=50),
-
         # Wstrzykujemy sesję bazy danych (KLUCZOWE dla nowej wersji)
         db: Session = Depends(get_db)):
     '''

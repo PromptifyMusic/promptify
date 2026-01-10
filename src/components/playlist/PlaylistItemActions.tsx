@@ -35,4 +35,3 @@ const PlaylistItemActions = memo(({ onDelete, onRegenerate, isRegenerating = fal
 PlaylistItemActions.displayName = 'PlaylistItemActions';
 
 export default PlaylistItemActions;
-

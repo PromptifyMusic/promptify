@@ -1,12 +1,7 @@
-﻿import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import type { AutoResizeOptions } from '../types';
 
-interface Options {
-  value: string;
-  maxHeight: number;
-  minHeight?: number;
-}
-
-export function useAutoResizeTextarea({ value, maxHeight, minHeight }: Options) {
+export function useAutoResizeTextarea({ value, maxHeight, minHeight }: AutoResizeOptions) {
   const ref = useRef<HTMLTextAreaElement | null>(null);
   const baselineRef = useRef<number | null>(null);
 
