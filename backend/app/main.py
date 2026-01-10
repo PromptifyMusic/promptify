@@ -172,6 +172,9 @@ def search_songs(
         input: prompt, liczba utworów
         output: liste piosenek pasujących do promptu o liczbie jaką podaliśmy
     '''
+    text = request.text
+    ilosc = request.top_n
+
     print(f"\n[API] NOWY PROMPT: '{text}' (Top {ilosc})")
 
     extracted_phrases = engine.extract_relevant_phrases(text)
