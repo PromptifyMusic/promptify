@@ -1,4 +1,4 @@
-﻿import PlaylistSection from '../playlist/PlaylistSection';
+import PlaylistSection from '../playlist/PlaylistSection';
 import { usePlaylistActions } from '../../hooks/usePlaylistActions';
 import { usePlaylistContext } from '../../context/PlaylistContext';
 
