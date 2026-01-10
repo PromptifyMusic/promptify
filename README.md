@@ -1,16 +1,54 @@
-# React + Vite
+# Promptify
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Generator playlist muzycznych oparty na AI, wykorzystujący Spotify API.
 
-Currently, two official plugins are available:
+## Quick Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Wymagania
+- Docker & Docker Compose
+- Node.js 18+ (dla frontendu)
+- Konto Spotify Developer (opcjonalnie, dla eksportu playlist)
 
-## React Compiler
+### Uruchomienie
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **Konfiguracja zmiennych środowiskowych**
+   
+   Utwórz plik `.env` w głównym katalogu projektu z zawartością:
+   ```env
+   VITE_API_BASE_URL=http://127.0.0.1:8000
+   DATABASE_URL=postgresql://postgres:haslo123@localhost:5432/postgres
+   DB_PASSWORD=haslo123
+   
+   # Spotify API (opcjonalne - tylko dla eksportu playlist)
+   SPOTIPY_CLIENT_ID=twój_client_id
+   SPOTIPY_CLIENT_SECRET=twój_client_secret
+   SPOTIPY_REDIRECT_URI=http://127.0.0.1:8000/callback
+   FRONTEND_URL=http://localhost:5173
+   ```
 
-## Expanding the ESLint configuration
+2. **Uruchom backend + bazę danych (Docker)**
+   ```bash
+   docker-compose up --build
+   ```
+   Backend: `http://localhost:8000`  
+   Swagger: `http://localhost:8000/docs`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+3. **Uruchom frontend (lokalnie)**
+   ```bash
+   npm install
+   npm run dev
+   ```
+   Frontend: `http://localhost:5173`
+
+### Zatrzymanie
+```bash
+docker-compose down
+```
+
+---
+
+## Uwagi
+- Pierwsze uruchomienie może zająć dłuższą chwilę
+- Baza danych automatycznie inicjalizowana przez `init.sql`
+- Po uruchamianiu backendu należy zaczekać na komunikat `INFO: Application startup complete.` widoczny w logach konsoli Docker, aby mieć pewnoiść, że został on w pełni zainicjalizowany.
+
