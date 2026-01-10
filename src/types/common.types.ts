@@ -34,12 +34,19 @@ export interface AsyncState<T> {
 /**
  * Poziomy ostrzeżeń dla counter'a
  */
-export type CounterState = 'normal' | 'warn' | 'critical';
+export enum CounterState {
+  Normal = 'normal',
+  Warn = 'warn',
+  Critical = 'critical',
+}
 
 /**
  * Tryb wyświetlania licznika
  */
-export type CounterMode = 'usedLimit' | 'remaining';
+export enum CounterMode {
+  UsedLimit = 'usedLimit',
+  Remaining = 'remaining',
+}
 
 /**
  * Opcje dla auto-resize textarea

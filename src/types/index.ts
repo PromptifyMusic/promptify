@@ -36,8 +36,8 @@ export type {
   ChangeHandler,
   ValidationResult,
   AsyncState,
-  CounterState,
-  CounterMode,
   AutoResizeOptions,
 } from './common.types';
+
+export { CounterState, CounterMode } from './common.types';
 
