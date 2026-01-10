@@ -1,18 +1,12 @@
 ﻿import { useState, useCallback } from 'react';
-import { PlaylistItem } from '../components/playlist/PlaylistSection';
+import type { PlaylistItem } from '../types';
 import { replaceSong, formatDuration, extractImageUrl } from '../services/api';
 
-/**
- * Custom hook do zarządzania operacjami na playliście
- * Zgodny z najlepszymi praktykami React - separation of concerns
- */
 export const usePlaylistOperations = () => {
     const [regeneratingItems, setRegeneratingItems] = useState<Set<string>>(new Set());
     const [isAddingItem, setIsAddingItem] = useState(false);
 
-    /**
-     * Regeneruje pojedynczy utwór w playliście używając inteligentnej wymiany
-     */
+
     const regenerateItem = useCallback(async (
         id: string,
         prompt: string,
@@ -52,9 +46,6 @@ export const usePlaylistOperations = () => {
         }
     }, []);
 
-    /**
-     * Dodaje nowy utwór do playlisty (także używa inteligentnej wymiany, ale bez rejected_song_id)
-     */
     const addItem = useCallback(async (
         prompt: string,
         currentPlaylistIds: string[],
@@ -64,7 +55,6 @@ export const usePlaylistOperations = () => {
         setIsAddingItem(true);
 
         try {
-            // Używamy pustego rejected_song_id dla dodawania nowego utworu
             const track = await replaceSong(prompt, '', currentPlaylistIds);
 
             const newItem = {

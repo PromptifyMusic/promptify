@@ -1,7 +1,7 @@
-﻿import { memo, useState } from 'react';
+import { memo, useState } from 'react';
 import { Music2, ExternalLink, CheckCircle } from 'lucide-react';
 import ActionButton from '../shared/ActionButton.tsx';
-import { PlaylistItem } from './PlaylistSection.tsx';
+import type { PlaylistItem } from '../../types';
 import { useSpotifyAuth } from '../../hooks/useSpotifyAuth.ts';
 import { exportPlaylistToSpotify } from '../../services/api.ts';
 
@@ -44,7 +44,6 @@ const ExportToSpotifyButton = memo(({
             setPlaylistUrl(response.playlist_url);
             setExportSuccess(true);
 
-            // Pokaż sukces przez 5 sekund
             setTimeout(() => {
                 setExportSuccess(false);
                 setPlaylistUrl(null);
@@ -95,4 +94,3 @@ const ExportToSpotifyButton = memo(({
 ExportToSpotifyButton.displayName = 'ExportToSpotifyButton';
 
 export default ExportToSpotifyButton;
-
