@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Spotify Types
  * Typy związane z integracją Spotify
  */
