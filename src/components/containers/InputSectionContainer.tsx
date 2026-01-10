@@ -1,4 +1,4 @@
-﻿import InputSection from '../layout/InputSection';
+import InputSection from '../layout/InputSection';
 import { usePlaylistActions } from '../../hooks/usePlaylistActions';
 
 export function InputSectionContainer() {
