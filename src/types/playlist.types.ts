@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Playlist Types
  * Typy związane z reprezentacją playlisty w aplikacji
  */
