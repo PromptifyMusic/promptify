@@ -1,9 +1,10 @@
 ﻿import React from 'react';
+import type { CounterMode, CounterState } from '../../types';
 
 export interface TextareaCounterProps {
   currentLength: number;
   maxLength: number;
-  mode?: 'usedLimit' | 'remaining';
+  mode?: CounterMode;
   warnAt?: number;
   criticalAt?: number;
   className?: string;
@@ -18,7 +19,7 @@ const TextareaCounter: React.FC<TextareaCounterProps> = ({
   className = '',
 }) => {
   const ratio = maxLength > 0 ? currentLength / maxLength : 0;
-  const state: 'normal' | 'warn' | 'critical' = ratio >= criticalAt
+  const state: CounterState = ratio >= criticalAt
     ? 'critical'
     : ratio >= warnAt
       ? 'warn'

@@ -1,7 +1,7 @@
 ﻿import { memo, useState } from 'react';
 import { Music2, ExternalLink, CheckCircle } from 'lucide-react';
 import ActionButton from '../shared/ActionButton.tsx';
-import { PlaylistItem } from './PlaylistSection.tsx';
+import type { PlaylistItem } from '../../types';
 import { useSpotifyAuth } from '../../hooks/useSpotifyAuth.ts';
 import { exportPlaylistToSpotify } from '../../services/api.ts';
 

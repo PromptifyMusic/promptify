@@ -1,4 +1,5 @@
 ﻿import {memo} from 'react';
+import type { PlaylistItem } from '../../types';
 import {
     DndContext,
     closestCenter,
@@ -23,15 +24,6 @@ import SortablePlaylistItem from './SortablePlaylistItem.tsx';
 import AddPlaylistItem from './AddPlaylistItem.tsx';
 import ExportToSpotifyButton from './ExportToSpotifyButton.tsx';
 
-export interface PlaylistItem {
-    id: string;              // Unikalny ID elementu playlisty (React key)
-    trackId: string;         // ID utworu z bazy danych (Million Song Dataset)
-    spotifyId: string;       // ID Spotify (używane do API)
-    title: string;
-    artist: string;
-    duration: string;
-    image?: string | null;
-}
 
 interface PlaylistSectionProps {
     isExpanded: boolean;

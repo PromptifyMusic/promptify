@@ -1,6 +1,7 @@
 ﻿import DarkVeil from "./components/layout/animatedBackground/DarkVeil.tsx";
 import InputSection from "./components/layout/InputSection.tsx";
-import PlaylistSection, { PlaylistItem } from "./components/playlist/PlaylistSection.tsx";
+import PlaylistSection from "./components/playlist/PlaylistSection.tsx";
+import type { PlaylistItem } from "./types";
 import { useState, useRef, useEffect } from "react";
 import SpotifyAuth from "./components/playlist/SpotifyAuth.tsx";
 import { generatePlaylist, formatDuration, extractImageUrl } from "./services/api.ts";

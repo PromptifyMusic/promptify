@@ -1,29 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { SpotifyAuthStatus, UseSpotifyAuthReturn } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
-interface SpotifyUser {
-    id: string;
-    display_name: string;
-    email?: string;
-}
-
-interface AuthStatus {
-    authenticated: boolean;
-    user?: SpotifyUser;
-    error?: string;
-    message?: string;
-}
-
-export const useSpotifyAuth = () => {
-    const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false });
+export const useSpotifyAuth = (): UseSpotifyAuthReturn => {
+    const [authStatus, setAuthStatus] = useState<SpotifyAuthStatus>({ authenticated: false });
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const checkAuthStatus = useCallback(async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/auth/status`);
-            const data: AuthStatus = await response.json();
+            const data: SpotifyAuthStatus = await response.json();
             setAuthStatus(data);
 
             // Jeśli jest komunikat błędu, pokaż go użytkownikowi
@@ -62,7 +50,7 @@ export const useSpotifyAuth = () => {
             window.history.replaceState({}, '', window.location.pathname);
         } else if (authStatus === 'error') {
             const reason = params.get('reason');
-            let message = 'Wystąpił błąd podczas autoryzacji Spotify.';
+            let message: string;
 
             switch (reason) {
                 case 'invalid_client':

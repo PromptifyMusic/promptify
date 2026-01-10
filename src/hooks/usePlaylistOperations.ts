@@ -1,5 +1,5 @@
 ﻿import { useState, useCallback } from 'react';
-import { PlaylistItem } from '../components/playlist/PlaylistSection';
+import type { PlaylistItem } from '../types';
 import { replaceSong, formatDuration, extractImageUrl } from '../services/api';
 
 /**
