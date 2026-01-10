@@ -2,32 +2,18 @@
 import base64
 import os
 from typing import List
-from pydantic import BaseModel
 from fastapi import FastAPI, Depends, HTTPException, Query, Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from . import models, schemas
-SongModel = models.Song
-TagModel = models.Tag
 from .database import SessionLocal, engine
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
-import torch
-import pandas as pd
-import numpy as np
-from sentence_transformers import SentenceTransformer
-from collections import defaultdict
-from gliner import GLiNER
-import spacy
-from spacy.matcher import Matcher
-from spacy.util import filter_spans
-from sklearn.metrics.pairwise import cosine_similarity
-from langdetect import detect, DetectorFactory
 from sqlalchemy import text
 from . import engine
-
+import numpy as np
 
 load_dotenv()
 
@@ -162,9 +148,10 @@ def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Dep
 
 @app.post("/search", response_model=List[schemas.SongResult])
 def search_songs(
+        request: schemas.SearchRequest,
         # text: str = Query(..., description="Prompt użytkownika"),
         # ilosc: int = Query(15, alias="top_n", ge=1, le=50),
-        request: schemas.SearchRequest,
+
         # Wstrzykujemy sesję bazy danych (KLUCZOWE dla nowej wersji)
         db: Session = Depends(get_db)):
     '''
@@ -172,7 +159,12 @@ def search_songs(
         input: prompt, liczba utworów
         output: liste piosenek pasujących do promptu o liczbie jaką podaliśmy
     '''
-    print(f"\n[API] NOWY PROMPT: '{text}' (Top {ilosc})")
+
+    text = request.text
+    top_n = request.top_n
+
+
+    print(f"\n[API] NOWY PROMPT: '{text}' (Top {top_n})")
 
     extracted_phrases = engine.extract_relevant_phrases(text)
 
@@ -206,13 +198,14 @@ def search_songs(
     found_tags_map = engine.map_phrases_to_tags(tags_queries)
     query_tag_weights = engine.get_query_tag_weights(found_tags_map)
 
-    candidates_df = engine.fetch_candidates_from_db(query_tag_weights, db)
+    criteria_audio = engine.phrases_to_features(audio_queries, search_indices=engine.SEARCH_INDICES, lang_code="pl")
+
+    candidates_df = engine.fetch_candidates_from_db(query_tag_weights, db, criteria_audio)
 
     if candidates_df.empty:
         print("[API] Brak wyników po tagach. Pobieranie puli zapasowej.")
         candidates_df = engine.fetch_candidates_from_db({}, db, limit=200)
 
-    criteria_audio = engine.phrases_to_features(audio_queries, search_indices=engine.SEARCH_INDICES, lang_code="pl")
     audio_scores = engine.calculate_audio_match(candidates_df, criteria_audio)
     candidates_df['audio_score'] = audio_scores
 
@@ -230,7 +223,7 @@ def search_songs(
     )
 
     sampling_cfg = engine.SAMPLING_CONFIG.copy()
-    sampling_cfg['final_n'] = ilosc
+    sampling_cfg['final_n'] = top_n
 
     final_playlist = engine.sample_final_songs(
         working_set,
@@ -479,7 +472,7 @@ def encode_image_to_base64(image_path: str):
 @app.post("/create_playlist_hardcoded")
 def create_playlist_hardcoded():
     '''
-        desc: Funkcja testowa, która tworzy playlistę
+        desc: Funkcja testowa, która tworzy playlistę (do delete?)
         input: -
         output: Status playlisty
     '''
@@ -537,6 +530,7 @@ def create_playlist_hardcoded():
         "cover_status": cover_msg,
         "tracks_count": len(spotify_uris)
     }
+
 
 
 @app.post("/export_playlist")
