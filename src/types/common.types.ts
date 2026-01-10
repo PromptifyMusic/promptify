@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Common Types
  * Wspólne typy używane w całej aplikacji
  */
