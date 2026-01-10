@@ -6,14 +6,22 @@ from dotenv import load_dotenv
 
 load_dotenv()  # wczytaj .env z katalogu projektu
 
+
+#Pobiera adres bazy danych ze zmiennych i jeśli go nie znajdzie, natychmiast wyłącza program z błędem
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("Brakuje DATABASE_URL w .env")
 
-# create_engine z pool_pre_ping aby uniknąć problemów z zerwanymi połączeniami
+
+
+
+#łącze między kodem Python a bazą PostgreSQL,
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
+#szablon, który tworzy połączenie z bazą
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
 Base = declarative_base()
 
 

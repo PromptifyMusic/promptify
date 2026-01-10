@@ -46,17 +46,25 @@ app.add_middleware(
 # ENDPOINT API
 
 def get_db():
+    '''
+    desc: Tworzy tymczasowe połączenie z bazą danych
+    input: -
+    output: Sesję bazy danych
+    '''
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
+
 @app.on_event("startup")
 def startup_event():
-    """
-    Pobiera tagi z bazy SQL i wrzuca je do zmiennych w engine.py (TAG_VECS),
-    """
+    '''
+    desc: uruchamia się przy starcie serwera, pobiera wektory tagów z bazy a następnie ładuje je do pamięci RAM
+    input: -
+    output: -
+    '''
     print("[START SERWERA]")
     db = SessionLocal()
     try:
@@ -67,10 +75,12 @@ def startup_event():
 
 
 @app.post("/search/replace", response_model=schemas.SongResult)
-def replace_song_endpoint(
-        request: schemas.ReplaceSongRequest,
-        db: Session = Depends(get_db)
-):
+def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Depends(get_db) ):
+    '''
+        desc: Używa SI z engine by znaleźć zastępstwo dla wybranej piosenki z search
+        input: Prompt usera, listę piosenek wyszukanych przez prompt oraz id piosenki jakiej już nie chcemy
+        output: dane do nowej piosenki
+    '''
 
     prompt = request.text
     exclude_ids = set(request.current_playlist_ids)
@@ -157,6 +167,11 @@ def search_songs(
         request: schemas.SearchRequest,
         # Wstrzykujemy sesję bazy danych (KLUCZOWE dla nowej wersji)
         db: Session = Depends(get_db)):
+    '''
+        desc: analizuje tekst przy pomocy SI a następnie szuka pasujących piosenek na podstawie tagów i cech audio
+        input: prompt, liczba utworów
+        output: liste piosenek pasujących do promptu o liczbie jaką podaliśmy
+    '''
     print(f"\n[API] NOWY PROMPT: '{text}' (Top {ilosc})")
 
     extracted_phrases = engine.extract_relevant_phrases(text)
@@ -232,92 +247,6 @@ def search_songs(
 
     return final_playlist[available_cols].replace({np.nan: None}).to_dict(orient="records")
 
-# @app.post("/search", response_model=List[schemas.SongResult])
-# def search_songs(
-#         text: str = Query(..., description="Prompt"),
-#         ilosc: int = Query(15, alias="top_n", ge=1, le=50),
-#         db: Session = Depends(get_db)):
-#
-#
-#     # Przypisanie zmiennych z parametrów
-#     prompt = text
-#     final_n = ilosc
-#
-#     print(f"\nNOWE ZAPYTANIE: '{prompt}' (Top {final_n})")
-#
-#
-#     # 1. NLP & EMBEDDINGS
-#     extracted_phrases = engine.extract_relevant_phrases(prompt)
-#     tags_queries = extracted_phrases
-#     audio_queries = extracted_phrases
-#
-#     # 2. SZUKANIE TAGÓW (SQL pgvector)
-#     found_tags_map = engine.search_tags_in_db(tags_queries, db, engine.model_e5, threshold=0.65)
-#     query_tag_weights = engine.get_query_tag_weights(found_tags_map)
-#
-#     # 3. POBIERANIE KANDYDATÓW (SQL WHERE)
-#     candidates_df = engine.fetch_candidates_from_db(query_tag_weights, db, limit=engine.RETRIEVAL_CONFIG["n_candidates"])
-#
-#     # Fallback
-#     if candidates_df.empty:
-#         print("Brak wyników po tagach. Pobieranie losowych popularnych.")
-#         candidates_df = engine.fetch_candidates_from_db({}, db, limit=100)
-#
-#     # 4. AUDIO MATCH
-#     criteria_audio = engine.phrases_to_features(audio_queries, engine.SEARCH_INDICES, lang_code="pl")
-#     audio_scores = engine.calculate_audio_match(candidates_df, criteria_audio)
-#     candidates_df['audio_score'] = audio_scores
-#
-#     # 5. MERGE
-#     has_tags = bool(found_tags_map)
-#     merged_df = engine.merge_tag_and_audio_scores(candidates_df, audio_weight=engine.SCORING_CONFIG['audio_weight'],
-#                                            use_tags=has_tags)
-#
-#     # 6. TIEROWANIE
-#     t_high, t_mid = engine.calculate_dynamic_thresholds(
-#         merged_df,
-#         high_threshold=engine.WORKSET_CONFIG['min_absolute_high'],
-#         mid_threshold=engine.WORKSET_CONFIG['min_absolute_mid']
-#     )
-#     tier_a, tier_b, tier_c = engine.tier_by_score(merged_df, t_high, t_mid)
-#
-#     # 7. PUL ROBOCZA
-#     working_set = engine.build_working_set(
-#         tier_a, tier_b, tier_c,
-#         target_pool_size=engine.WORKSET_CONFIG['target_pool_size'],
-#         min_required_size=engine.WORKSET_CONFIG['min_required_size'],
-#         popularity_rescue_ratio=engine.WORKSET_CONFIG['popularity_rescue_ratio']
-#     )
-#
-#     # 8. FINALNE LOSOWANIE
-#     final_playlist = engine.sample_final_songs(
-#         working_set,
-#         popularity_cfg=engine.POPULARITY_CONFIG,
-#         sampling_cfg={
-#             "final_n": final_n,
-#             "alpha": 2.0,
-#             "shuffle": True
-#         }
-#     )
-#
-#     # 9. ZWROT WYNIKÓW
-#     if final_playlist.empty:
-#         raise HTTPException(status_code=404, detail="Nie udało się znaleźć pasujących utworów.")
-#
-#     result_cols = [
-#         "spotify_id", "name", "artist", "popularity", "score",
-#         "spotify_preview_url", "album_images", "duration_ms"
-#     ]
-#     available_cols = [c for c in result_cols if c in final_playlist.columns]
-#
-#     return final_playlist[available_cols].to_dict(orient="records")
-
-
-
-
-
-
-
 
 #Mikolaj
 
@@ -330,6 +259,11 @@ SPOTIFY_SCOPE = "playlist-modify-public playlist-modify-private"
 
 @app.get("/")
 def root():
+    '''
+        desc: prosty endpoint do kontroli czy api działa
+        input: -
+        output: -
+    '''
     return {"message": "Api  działa"}
 
 
@@ -338,6 +272,11 @@ def root():
 ##-------------------------SPOTIFY CONFIG-------------------------
 
 def get_spotify_oauth():
+    '''
+            desc: Konfiguruje mechanizm logowania
+            input: -
+            output: Ustawienia do bezpiecznego połączenia
+        '''
     client_id = os.getenv("SPOTIPY_CLIENT_ID")
     client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
     redirect_uri = os.getenv("SPOTIPY_REDIRECT_URI")
@@ -364,6 +303,11 @@ user_tokens = {}
 
 @app.get("/spotify/config/check")
 def check_spotify_config():
+    '''
+        desc: Sprawdza czy w pliku .env są wszystkie potrzebne klucze do Spotify
+        input: -
+        output: Raport
+    '''
     client_id = os.getenv("SPOTIPY_CLIENT_ID")
     client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
     redirect_uri = os.getenv("SPOTIPY_REDIRECT_URI")
@@ -381,9 +325,11 @@ def check_spotify_config():
 
 @app.get("/login")
 def login_spotify():
-    """
-    Krok 1: Przekierowuje użytkownika do logowania w Spotify.
-    """
+    '''
+        desc: Rozpoczyna logowanie użytkownika
+        input: -
+        output: Przekierowanie na oficjalną stronę Spotify
+    '''
     sp_oauth = get_spotify_oauth()
     # Pobierz URL autoryzacji
     auth_url = sp_oauth.get_authorize_url()
@@ -398,9 +344,11 @@ def login_spotify():
 
 @app.get("/callback")
 def callback_spotify(code: str = None, error: str = None):
-    """
-    Krok 2: Spotify wraca tutaj z kodem lub błędem.
-    """
+    '''
+        desc: Wymienia kod na token
+        input: Specjalny kod autoryzacyjny zwracany przez spotify
+        output: Przekierowanie z powrotem na naszą stronę
+    '''
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
@@ -442,9 +390,11 @@ def callback_spotify(code: str = None, error: str = None):
 
 @app.get("/auth/status")
 def check_auth_status():
-    """
-    Sprawdza czy użytkownik jest zalogowany do Spotify.
-    """
+    '''
+        desc: Sprawdza, czy użytkownik jest zalogowany i czy ma aktywną sesję
+        input: -
+        output: Dane zalogowanego użytkownika
+    '''
     token_info = user_tokens.get('current_user')
     if not token_info:
         return {"authenticated": False}
@@ -488,9 +438,11 @@ def check_auth_status():
 
 @app.post("/auth/logout")
 def logout_spotify():
-    """
-    Wylogowuje użytkownika (usuwa token z pamięci).
-    """
+    '''
+        desc: Wylogowuje użytkownika
+        input: -
+        output: Komunikat
+    '''
     user_tokens.pop('current_user', None)
     return {"message": "Wylogowano pomyślnie"}
 
@@ -511,6 +463,11 @@ PLAYLIST_COVER_PATH = "cover.jpg"
 
 #do zdjęc
 def encode_image_to_base64(image_path: str):
+    '''
+        desc: Wylogowuje użytkownika
+        input: Zamienia obrazek na ciąg znaków tekstowych
+        output: Zakodowane zdjęcie
+    '''
     try:
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode('utf-8')
@@ -521,9 +478,11 @@ def encode_image_to_base64(image_path: str):
 
 @app.post("/create_playlist_hardcoded")
 def create_playlist_hardcoded():
-    """
-    Wersja z zewnętrznymi zmiennymi + okładką + POPRAWNYMI WCIĘCIAMI.
-    """
+    '''
+        desc: Funkcja testowa, która tworzy playlistę
+        input: -
+        output: Status playlisty
+    '''
 
     #Autoryzacja
     token_info = user_tokens.get('current_user')

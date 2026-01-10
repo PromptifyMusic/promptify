@@ -6,8 +6,8 @@ from pgvector.sqlalchemy import Vector  # Import zostaje
 from .database import Base
 
 
-# ...
-# 1. TABELA MAPUJĄCA (ASSOCIATION TABLE)
+
+#tabela mapująca relacji M:M
 song_tag_association = Table(
     'song_tags_map', Base.metadata,
     Column('song_id', String, ForeignKey('songs_master.song_id'), primary_key=True),
@@ -29,9 +29,6 @@ class Song(Base):
     __tablename__ = "songs_master"
 
     song_id = Column(String, primary_key=True)
-
-
-
     name = Column(String)
     artist = Column(String)
     album_name = Column(String)
