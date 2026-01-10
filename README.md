@@ -51,4 +51,4 @@ docker-compose down
 - Pierwsze uruchomienie może zająć dłuższą chwilę
 - Baza danych automatycznie inicjalizowana przez `init.sql`
 - Po uruchamianiu backendu należy zaczekać na komunikat `INFO: Application startup complete.` widoczny w logach konsoli Docker, aby mieć pewnoiść, że został on w pełni zainicjalizowany.
-
+- Skrypty `setup_backend.ps1` i `run_backend.ps1` są przestarzałe - używaj Docker Compose. (Pozwalają one na lokalne uruchomienie backendu wraz z przykładową bazą. Wymagają preinstalacji POSTGRESQL i Python)
