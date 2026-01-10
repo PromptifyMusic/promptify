@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { CounterMode, CounterState } from '../../types';
 
 export interface TextareaCounterProps {
