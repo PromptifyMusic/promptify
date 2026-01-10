@@ -58,20 +58,6 @@ export function usePlaylistActions() {
     [setIsLoading, setInitialQuantity, setOriginalPrompt, setItems, setIsExpanded]
   );
 
-  const handleReorderItems = useCallback(
-    (reorderedItems: PlaylistItem[]) => {
-      reorderItems(reorderedItems);
-    },
-    [reorderItems]
-  );
-
-  const handleDeleteItem = useCallback(
-    (id: string) => {
-      deleteItem(id);
-    },
-    [deleteItem]
-  );
-
   const handleRegenerateItem = useCallback(
     async (id: string) => {
       const itemToReplace = items.find((item) => item.id === id);
@@ -115,17 +101,6 @@ export function usePlaylistActions() {
     );
   }, [items, originalPrompt, addItemOperation, addItem]);
 
-  const handlePlaylistNameChange = useCallback(
-    (newName: string) => {
-      setName(newName);
-    },
-    [setName]
-  );
-
-  const handleCollapse = useCallback(() => {
-    setIsExpanded(false);
-  }, [setIsExpanded]);
-
   return {
     items,
     isExpanded,
@@ -137,12 +112,12 @@ export function usePlaylistActions() {
     isAddingItem,
 
     handleCreatePlaylist,
-    handleReorderItems,
-    handleDeleteItem,
+    reorderItems,
+    deleteItem,
     handleRegenerateItem,
     handleAddItem,
-    handlePlaylistNameChange,
-    handleCollapse,
+    setName,
+    setIsExpanded,
   };
 }
 
