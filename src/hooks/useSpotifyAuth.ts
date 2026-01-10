@@ -14,7 +14,6 @@ export const useSpotifyAuth = (): UseSpotifyAuthReturn => {
             const data: SpotifyAuthStatus = await response.json();
             setAuthStatus(data);
 
-            // Jeśli jest komunikat błędu, pokaż go użytkownikowi
             if (data.error && data.message) {
                 setErrorMessage(data.message);
             } else {
@@ -32,21 +31,16 @@ export const useSpotifyAuth = (): UseSpotifyAuthReturn => {
         checkAuthStatus();
     }, [checkAuthStatus]);
 
-    // Sprawdź czy callback z Spotify był udany lub zwrócił błąd
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const authStatus = params.get('spotify_auth');
 
         if (authStatus === 'success') {
-            // Usuń parametr z URL
             window.history.replaceState({}, '', window.location.pathname);
-            // Odśwież status autoryzacji
             checkAuthStatus();
         } else if (authStatus === 'cancelled') {
-            // Użytkownik anulował autoryzację
             console.log('[useSpotifyAuth] Autoryzacja została anulowana przez użytkownika');
             setErrorMessage(null); // Nie pokazuj błędu, to była świadoma decyzja użytkownika
-            // Usuń parametry z URL
             window.history.replaceState({}, '', window.location.pathname);
         } else if (authStatus === 'error') {
             const reason = params.get('reason');
@@ -70,7 +64,6 @@ export const useSpotifyAuth = (): UseSpotifyAuthReturn => {
             }
 
             setErrorMessage(message);
-            // Usuń parametry z URL
             window.history.replaceState({}, '', window.location.pathname);
         }
     }, [checkAuthStatus]);

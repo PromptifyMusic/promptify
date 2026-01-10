@@ -44,7 +44,6 @@ const ExportToSpotifyButton = memo(({
             setPlaylistUrl(response.playlist_url);
             setExportSuccess(true);
 
-            // Pokaż sukces przez 5 sekund
             setTimeout(() => {
                 setExportSuccess(false);
                 setPlaylistUrl(null);
@@ -95,4 +94,3 @@ const ExportToSpotifyButton = memo(({
 ExportToSpotifyButton.displayName = 'ExportToSpotifyButton';
 
 export default ExportToSpotifyButton;
-

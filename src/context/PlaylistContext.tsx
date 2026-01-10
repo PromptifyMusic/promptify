@@ -51,7 +51,6 @@ const initialState: PlaylistState = {
 };
 
 export function PlaylistProvider({ children }: PlaylistProviderProps) {
-  // Pojedyncze useState dla każdego pola stanu
   const [items, setItems] = useState<PlaylistItem[]>(initialState.items);
   const [isExpanded, setIsExpanded] = useState(initialState.isExpanded);
   const [isLoading, setIsLoading] = useState(initialState.isLoading);
@@ -171,4 +170,3 @@ export function usePlaylistContext(): PlaylistContextType {
 
   return context;
 }
-
