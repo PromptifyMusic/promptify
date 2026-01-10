@@ -100,11 +100,19 @@ def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Dep
     found_tags_map = engine.map_phrases_to_tags(tags_queries)
     query_tag_weights = engine.get_query_tag_weights(found_tags_map)
 
-    candidates_df = engine.fetch_candidates_from_db(query_tag_weights, db, limit=200)
+
+    criteria_audio = engine.phrases_to_features(
+        audio_queries,
+        search_indices=engine.SEARCH_INDICES,
+        lang_code="pl"
+    )
+
+
+    candidates_df = engine.fetch_candidates_from_db(query_tag_weights, db,criteria_audio, limit=200)
 
     if candidates_df.empty:
         print("[REPLACE] Brak kandydatów po tagach. Fallback popularne.")
-        candidates_df = engine.fetch_candidates_from_db({}, db, limit=200)
+        candidates_df = engine.fetch_candidates_from_db({}, db, criteria_audio, limit=200)
 
     criteria_audio = engine.phrases_to_features(
         audio_queries,
@@ -203,9 +211,9 @@ def search_songs(
 
     if candidates_df.empty:
         print("[API] Brak wyników po tagach. Pobieranie puli zapasowej.")
-        candidates_df = engine.fetch_candidates_from_db({}, db, limit=200)
+        candidates_df = engine.fetch_candidates_from_db({}, db, criteria_audio,  limit=200)
 
-    audio_scores = engine.calculate_audio_match(candidates_df, criteria_audio)
+    audio_scores = engine.calculate_audio_match(candidates_df,  criteria_audio)
     candidates_df['audio_score'] = audio_scores
 
     has_tags = bool(found_tags_map)
