@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { CounterMode } from '../../types';
 import Textarea from '../shared/Textarea.tsx';
 import TextareaCounter from '../shared/TextareaCounter.tsx';
