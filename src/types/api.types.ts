@@ -1,4 +1,4 @@
-﻿/**
+/**
  * API Types
  * Typy dla komunikacji z backendem
  */
