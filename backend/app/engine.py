@@ -820,10 +820,6 @@ def fetch_candidates_from_db(
         MARGIN = 0.15
 
         for feat_name, data in audio_constraints:
-
-            if data['confidence'] < 0.6:
-                continue
-
             target_range = data['value']
 
             if isinstance(target_range, (list, tuple)):
@@ -835,8 +831,9 @@ def fetch_candidates_from_db(
             safe_max = min(1.0, t_max + MARGIN)
 
             if hasattr(models.Song, feat_name):
+                margin = 0.25
                 column = getattr(models.Song, feat_name)
-                songs_query = songs_query.filter(cast(column, Float).between(safe_min, safe_max))
+                songs_query = songs_query.filter(cast(column, Float).between(safe_min - margin, safe_max + margin))
                 print(f" -> SQL Filter: {feat_name} BETWEEN {safe_min:.2f} AND {safe_max:.2f}")
 
     # songs_query = songs_query.order_by(text("RANDOM()"))
