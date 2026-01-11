@@ -51,12 +51,7 @@ def startup_event():
     input: -
     output: -
     '''
-    print("[START SERWERA]")
-    db = SessionLocal()
-    try:
-        engine.initialize_global_tags(db)
-    finally:
-        db.close()
+    print("[STARTUP]Gotowy.")
 
 
 
@@ -88,7 +83,7 @@ def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Dep
     ROUTING_THRESHOLD = 0.81
 
     for phrase in list(audio_queries):
-        check = engine.map_phrases_to_tags([phrase], threshold=ROUTING_THRESHOLD)
+        check = engine.map_phrases_to_tags([phrase],db_session=db, threshold=ROUTING_THRESHOLD)
         if check:
             found_tag_name = list(check.keys())[0]
             audio_queries.remove(phrase)
@@ -97,7 +92,7 @@ def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Dep
     print(f"[REPLACE] Tagi={tags_queries} | Audio={audio_queries}")
 
 
-    found_tags_map = engine.map_phrases_to_tags(tags_queries)
+    found_tags_map = engine.map_phrases_to_tags(tags_queries,db_session=db)
     query_tag_weights = engine.get_query_tag_weights(found_tags_map)
 
 
@@ -191,7 +186,7 @@ def search_songs(
 
     #Sito
     for phrase in list(audio_queries):
-        check = engine.map_phrases_to_tags([phrase], threshold=0.81)
+        check = engine.map_phrases_to_tags([phrase],db_session=db, threshold=0.81)
 
         if check:
             found_tag_name = list(check.keys())[0]
@@ -202,7 +197,7 @@ def search_songs(
 
     print(f"Tagi={tags_queries} | Audio={audio_queries}")
 
-    found_tags_map = engine.map_phrases_to_tags(tags_queries)
+    found_tags_map = engine.map_phrases_to_tags(tags_queries, db_session=db)
     query_tag_weights = engine.get_query_tag_weights(found_tags_map)
 
     criteria_audio = engine.phrases_to_features(audio_queries, search_indices=engine.SEARCH_INDICES, lang_code="pl")

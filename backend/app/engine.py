@@ -12,8 +12,8 @@ from langdetect import detect, DetectorFactory
 from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload, load_only
 from . import models
-from sqlalchemy import text, cast, Float
-
+from sqlalchemy import text, cast, Float,  select
+from pgvector.sqlalchemy import Vector
 
 
 
@@ -297,7 +297,7 @@ def get_label_config_lists(config):
 GLINER_LABELS_LIST, GLINER_LABEL_MAP = get_label_config_lists(LABELS_CONFIG)
 
 
-def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.3):
+def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.8):
     if not spacy_phrases:
         return []
 
@@ -720,7 +720,7 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
                   print(f"nadpisywanie '{feat}': (Score: {score:.2f})")
             merged[feat] = {'value': val, 'confidence': float(score)}
 
-    print("\n[AUDIO MATCH] Zmapowane cechy audio:", flush=True)
+    print("\n[AUDIO MATCH] Zmapowane cechy auclassify_phrases_with_glinerdio:", flush=True)
     if not merged:
         print("   -> Brak (używam domyślnych/random)", flush=True)
     else:
@@ -734,29 +734,45 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
 
 #  MP-------------------------------------------------------------------------------
 
-def map_phrases_to_tags(phrases, threshold=None):
+def map_phrases_to_tags(
+    phrases: list[str],
+    db_session: Session,
+    model=model_e5,
+    threshold: float = 0.65
+) -> dict[str, float]:
+
     if threshold is None:
         threshold = EXTRACTION_CONFIG["tag_similarity_threshold"]
 
-    if not phrases or TAG_VECS is None or len(TAG_VECS) == 0:
+    if not phrases:
         return {}
 
-    print(f"[ENGINE] Mapowanie w RAM (NumPy): {phrases}")
-
-    q_vecs = model_e5.encode([f"query: {p}" for p in phrases], convert_to_numpy=True, normalize_embeddings=True)
-
-    sims = cosine_similarity(TAG_VECS, q_vecs)
     found_tags = {}
 
-    for i, phrase in enumerate(phrases):
-        col = sims[:, i]
-        best_idx = np.argmax(col)
-        best_score = float(col[best_idx])
-        best_tag = TAGS_LIST[best_idx]
+    print(f"[ENGINE] Mapowanie w pgvector (NumPy): {phrases}")
 
-        if best_score >= threshold:
-            print(f"   MATCH: '{phrase}' -> '{best_tag}' ({best_score:.3f})")
-            found_tags[best_tag] = max(found_tags.get(best_tag, 0), best_score)
+    for phrase in phrases:
+        query_vec = model.encode(f"query: {phrase}", normalize_embeddings=True).tolist()
+
+        distance_expr = models.Tag.tag_embedding.cosine_distance(query_vec)
+
+        stmt = (
+            select(models.Tag, distance_expr.label("dist"))
+            .order_by(distance_expr)
+            .limit(1)
+        )
+        row = db_session.execute(stmt).first()
+
+        if row:
+            best_tag, best_dist = row
+            t_name = best_tag.name
+            similarity = 1.0 - float(best_dist)
+
+            if similarity >= threshold:
+                print(f"[DB MATCH] '{phrase}' -> '{t_name}' ({similarity:.3f})")
+                found_tags[t_name] = max(found_tags.get(t_name, 0), similarity)
+            else:
+                pass
 
     return found_tags
 
@@ -772,29 +788,32 @@ def get_query_tag_weights(raw_tags):
     if s <= 0: return raw_tags
     return {t: v / s for t, v in raw_tags.items()}
 
+#najalpej bez limitu
 
 def fetch_candidates_from_db(
         tag_scores: dict[str, float],
         db: Session,
-        audio_constraints: list = None,  # NOWY PARAMETR: Wynik z phrases_to_features
-        limit: int = None
+        audio_constraints: list = None,
+        limit: int = 2000
 ) -> pd.DataFrame:
     if limit is None:
         limit = RETRIEVAL_CONFIG["n_candidates"]
 
     songs_query = db.query(models.Song)
+    print(limit);
 
-    # --- SCENARIUSZ A: MAMY TAGI (Najlepsza opcja) ---
+
+    #
     if tag_scores:
         tags_list = list(tag_scores.keys())
-        print(f"[DB FETCH] Scenariusz A: Pobieram po tagach: {tags_list}")
+        print(f"[DB FETCH]Pobieram po tagach: {tags_list}")
 
         songs_query = songs_query.join(models.Song.tags) \
             .filter(models.Tag.name.in_(tags_list)) \
             .options(joinedload(models.Song.tags))
 
-    #NIE MA TAGÓW
-    elif audio_constraints:
+
+    if audio_constraints:
         print(f"[DB FETCH] Brak tagów, filtr cech.")
 
         MARGIN = 0.15
