@@ -1,4 +1,5 @@
 import os
+import random
 import torch
 import pandas as pd
 import numpy as np
@@ -12,7 +13,7 @@ from langdetect import detect, DetectorFactory
 from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload, load_only
 from . import models
-from sqlalchemy import text, cast, Float,  select
+from sqlalchemy import text, cast, Float,  select, func
 from pgvector.sqlalchemy import Vector
 
 
@@ -717,7 +718,7 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
     for feat, val, score in found_explicit_audio:
         if feat not in merged or score > merged[feat]['confidence']:
             if feat in merged:
-                  print(f"nadpisywanie '{feat}': (Score: {score:.2f})")
+                print(f"nadpisywanie '{feat}': (Score: {score:.2f})")
             merged[feat] = {'value': val, 'confidence': float(score)}
 
     print("\n[AUDIO MATCH] Zmapowane cechy auclassify_phrases_with_glinerdio:", flush=True)
@@ -799,7 +800,7 @@ def fetch_candidates_from_db(
     if limit is None:
         limit = RETRIEVAL_CONFIG["n_candidates"]
 
-    songs_query = db.query(models.Song)
+    songs_query = db.query(models.Song).distinct()
     print(limit);
 
 
@@ -814,7 +815,7 @@ def fetch_candidates_from_db(
 
 
     if audio_constraints:
-        print(f"[DB FETCH] Brak tagów, filtr cech.")
+        print(f"[DB FETCH] Filtr cech audio.")
 
         MARGIN = 0.15
 
@@ -838,14 +839,52 @@ def fetch_candidates_from_db(
                 songs_query = songs_query.filter(cast(column, Float).between(safe_min, safe_max))
                 print(f" -> SQL Filter: {feat_name} BETWEEN {safe_min:.2f} AND {safe_max:.2f}")
 
-    songs_query = songs_query.order_by(text("RANDOM()"))
-    # Optymalizacja
-    songs_query = songs_query.options(joinedload(models.Song.tags))
+    # songs_query = songs_query.order_by(text("RANDOM()"))
+    # # Optymalizacja
+    # songs_query = songs_query.options(joinedload(models.Song.tags))
 
-    print(f"[DB FETCH]Pobieram losową próbkę {limit} utworów...")
-    songs = songs_query.limit(limit).all()
+    # print(f"[DB FETCH]Pobieram losową próbkę {limit} utworów...")
+    # songs = songs_query.limit(limit).all()
+
+    # ------------------
+    # Random sample
+    total_estimate = songs_query.count()
+
+    if total_estimate <= limit:
+        print(f"[DB FETCH] Pobieram wszytskie utwory spełniające kryteria: {total_estimate}.")
+        songs = songs_query.all()
+
+    else:
+        seed = random.randint(0, 1_000_000)
+        SAMPLE_BUCKETS = 100
+
+        TARGET_BUCKETS = max(
+            1, int(100 * (limit * 1.2) / max(total_estimate, 1))
+        ) # procent rekordów do pobrania
+
+        print(f"[DB FETCH] Pobieram hash-based sample: {TARGET_BUCKETS}% z {total_estimate} rekordów")
+
+        songs_query = songs_query.options(joinedload(models.Song.tags))
+        songs = (
+            songs_query
+            .filter(
+                func.mod(
+                    func.abs(func.hashtext(func.concat(models.Song.song_id, str(seed)))),
+                    SAMPLE_BUCKETS
+                ) < TARGET_BUCKETS
+            )
+            .limit(limit)
+            .all()
+        )
+
+    # ------------------
+    # Fallback jeśli filtr/losowanie zwróci 0 wyników
+    if not songs:
+        print("[DB FETCH] Sampling zwrócił 0 wyników — fallback losowy limit")
+        songs = songs_query.limit(limit).all()    
 
 
+    # Tworzenie dataframe
     data = []
     q_pow = SCORING_CONFIG.get("query_pow", 1.0)
 
