@@ -189,7 +189,7 @@ def create_matcher_for_nlp(nlp_instance):
         # ],
         [
             {"POS": "VERB", "LEMMA": {"NOT_IN": GENERIC_VERBS}},
-            {**noun_filter, "OP": "+"} 
+            {"POS": {"IN": ["NOUN", "PROPN", "ADJ"]}, "IS_STOP": False, "LEMMA": {"NOT_IN": GENERIC_LEMMAS}, "OP": "+"}
         ],
 
         [{"POS": "ADP"}, {"POS": "NOUN"}, {"IS_DIGIT": True}],
