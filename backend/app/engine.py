@@ -91,9 +91,19 @@ GENERIC_LEMMAS = [
 
 
 print("[ENGINE] Ładowanie modeli AI")
-model_e5 = SentenceTransformer('intfloat/multilingual-e5-base')
+
+device = (
+    "cuda" if torch.cuda.is_available() 
+    else "mps" if torch.backends.mps.is_available() 
+    else "cpu"
+)
+
+print(f"[ENGINE] Wykryte urządzenie obliczeniowe: {device}")
+
+
+model_e5 = SentenceTransformer('intfloat/multilingual-e5-base', device=device)
 # model_gliner = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
-model_gliner = GLiNER.from_pretrained("urchade/gliner_multi-v2.1")
+model_gliner = GLiNER.from_pretrained("urchade/gliner_multi-v2.1").to(device)
 
 
 nlp_pl = spacy.load("pl_core_news_lg")
@@ -168,13 +178,18 @@ def create_matcher_for_nlp(nlp_instance):
 
         [{"POS": "ADJ", "IS_STOP": False}],
 
-        [{"POS": {"IN": ["NOUN", "PROPN"]}, "IS_STOP": False}, noun_filter],
+        # [{"POS": {"IN": ["NOUN", "PROPN"]}, "IS_STOP": False}, noun_filter],
+        [noun_filter, noun_filter],
 
         [{"POS": "ADV", "OP": "?"}, {"POS": "ADJ"}, {"POS": "ADP"}, noun_filter],
 
+        # [
+        #     {"POS": "VERB", "LEMMA": {"NOT_IN": GENERIC_VERBS}},
+        #     {"POS": {"IN": ["NOUN", "ADJ", "PRON"]}, "OP": "+"}
+        # ],
         [
             {"POS": "VERB", "LEMMA": {"NOT_IN": GENERIC_VERBS}},
-            {"POS": {"IN": ["NOUN", "ADJ", "PRON"]}, "OP": "+"}
+            noun_filter, {"OP": "+"}
         ],
 
         [{"POS": "ADP"}, {"POS": "NOUN"}, {"IS_DIGIT": True}],
@@ -237,6 +252,8 @@ def extract_relevant_phrases(prompt):
     for span in combined_spans:
         if is_span_negated(doc, span.start):
             continue
+
+
 
         final_phrases.append(span.text.lower())
 
