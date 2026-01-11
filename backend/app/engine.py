@@ -838,24 +838,12 @@ def fetch_candidates_from_db(
                 songs_query = songs_query.filter(cast(column, Float).between(safe_min, safe_max))
                 print(f" -> SQL Filter: {feat_name} BETWEEN {safe_min:.2f} AND {safe_max:.2f}")
 
-
-
     songs_query = songs_query.order_by(text("RANDOM()"))
     # Optymalizacja
     songs_query = songs_query.options(joinedload(models.Song.tags))
+
     print(f"[DB FETCH]Pobieram losową próbkę {limit} utworów...")
     songs = songs_query.limit(limit).all()
-
-    #emergancy
-    if not songs and audio_constraints and not tag_scores:
-        print("[DB FETCH]Filtry zwróciły 0 wyników. Pobieram losowe.")
-        songs = db.query(models.Song).order_by(text("RANDOM()")).limit(limit).all()
-
-    if not songs:
-        return pd.DataFrame()
-
-
-
 
 
     data = []
