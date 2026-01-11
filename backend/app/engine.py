@@ -1,4 +1,5 @@
 import os
+import random
 import torch
 import pandas as pd
 import numpy as np
@@ -12,7 +13,7 @@ from langdetect import detect, DetectorFactory
 from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload, load_only
 from . import models
-from sqlalchemy import text, cast, Float,  select
+from sqlalchemy import text, cast, Float,  select, func
 from pgvector.sqlalchemy import Vector
 from . import engine_config
 
@@ -63,7 +64,14 @@ def initialize_global_tags(db: Session):
 
 
 
-
+# device = (
+#     "cuda" if torch.cuda.is_available()
+#     else "mps" if torch.backends.mps.is_available()
+#     else "cpu"
+# )
+#
+# print(f"[ENGINE] Wykryte urządzenie obliczeniowe: {device}")
+#
 
 
 print("[ENGINE] Ładowanie modeli AI")
@@ -103,13 +111,21 @@ def create_matcher_for_nlp(nlp_instance):
 
         [{"POS": "ADJ", "IS_STOP": False}],
 
-        [{"POS": {"IN": ["NOUN", "PROPN"]}, "IS_STOP": False}, noun_filter],
+        # [{"POS": {"IN": ["NOUN", "PROPN"]}, "IS_STOP": False}, noun_filter],
+        [noun_filter, noun_filter],
 
         [{"POS": "ADV", "OP": "?"}, {"POS": "ADJ"}, {"POS": "ADP"}, noun_filter],
 
+        # [
+        #     {"POS": "VERB", "LEMMA": {"NOT_IN": GENERIC_VERBS}},
+        #     {"POS": {"IN": ["NOUN", "ADJ", "PRON"]}, "OP": "+"}
+        # ],
         [
+            # {"POS": "VERB", "LEMMA": {"NOT_IN": engine_config.GENERIC_VERBS}},
+            # {"POS": {"IN": ["NOUN", "ADJ", "PRON"]}, "OP": "+"},
+
             {"POS": "VERB", "LEMMA": {"NOT_IN": engine_config.GENERIC_VERBS}},
-            {"POS": {"IN": ["NOUN", "ADJ", "PRON"]}, "OP": "+"}
+            {"POS": {"IN": ["NOUN", "PROPN", "ADJ"]}, "IS_STOP": False, "LEMMA": {"NOT_IN": engine_config.GENERIC_LEMMAS}, "OP": "+"}
         ],
 
         [{"POS": "ADP"}, {"POS": "NOUN"}, {"IS_DIGIT": True}],
@@ -173,6 +189,8 @@ def extract_relevant_phrases(prompt):
         if is_span_negated(doc, span.start):
             continue
 
+
+
         final_phrases.append(span.text.lower())
 
     unique_phrases = sorted(list(set([p.strip() for p in final_phrases if len(p.strip()) > 2])))
@@ -202,7 +220,7 @@ def get_label_config_lists(config):
 GLINER_LABELS_LIST, GLINER_LABEL_MAP = get_label_config_lists(engine_config.LABELS_CONFIG)
 
 
-def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.30):
+def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.3):
     if not spacy_phrases:
         return []
 
@@ -215,13 +233,10 @@ def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.30):
     # Iterujemy po frazach ze spaCy i szukamy dla nich etykiety w wynikach GLiNERa
     for phrase in spacy_phrases:
         matched_category = None
-        matched_route = "AUDIO"  # Domyślny routing
+        matched_route = "AUDIO"
 
-        # Normalizacja frazy spaCy do porównania
         phrase_lower = phrase.lower().strip()
 
-        # Szukamy czy ta fraza została też znaleziona przez GLiNERa
-        # Sprawdzamy czy tekst encji GLiNERa zawiera się w frazie spaCy lub odwrotnie
         best_score = 0
 
         if any(x in phrase_lower for x in ["lat", "rok", "80", "90", "00", "70"]) and any(
@@ -233,9 +248,7 @@ def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.30):
         for entity in gliner_predictions:
             entity_lower = entity['text'].lower().strip()
 
-            # Sprawdzenie pokrycia (overlap)
             if phrase_lower in entity_lower or entity_lower in phrase_lower:
-                # Jeśli mamy dopasowanie, pobieramy czystą nazwę kategorii
                 full_label = entity['label']
                 short_key = GLINER_LABEL_MAP.get(full_label)
 
@@ -245,8 +258,6 @@ def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.30):
                     matched_route = engine_config.LABELS_CONFIG[short_key]['route']
                     break  # Znaleźliśmy etykietę, idziemy do następnej frazy spaCy
 
-        # Jeśli GLiNER nic nie znalazł dla tej frazy, ale spaCy ją wykryło
-        # oznaczamy jako ogólną "cecha_audio" (w dalszych etapach E5 może ją oznaszyć jako "śmieć")
         if not matched_category:
             matched_category = "cecha_audio"  # Fallback
             matched_route = "AUDIO"
@@ -386,7 +397,7 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
     for feat, val, score in found_explicit_audio:
         if feat not in merged or score > merged[feat]['confidence']:
             if feat in merged:
-                  print(f"nadpisywanie '{feat}': (Score: {score:.2f})")
+                print(f"nadpisywanie '{feat}': (Score: {score:.2f})")
             merged[feat] = {'value': val, 'confidence': float(score)}
 
     print("\n[AUDIO MATCH] Zmapowane cechy auclassify_phrases_with_glinerdio:", flush=True)
@@ -469,7 +480,7 @@ def fetch_candidates_from_db(
     if limit is None:
         limit = engine_config.RETRIEVAL_CONFIG["n_candidates"]
 
-    songs_query = db.query(models.Song)
+    songs_query = db.query(models.Song).distinct()
     print(limit);
 
 
@@ -484,15 +495,11 @@ def fetch_candidates_from_db(
 
 
     if audio_constraints:
-        print(f"[DB FETCH] Brak tagów, filtr cech.")
+        print(f"[DB FETCH] Filtr cech audio.")
 
         MARGIN = 0.15
 
         for feat_name, data in audio_constraints:
-
-            if data['confidence'] < 0.6:
-                continue
-
             target_range = data['value']
 
             if isinstance(target_range, (list, tuple)):
@@ -508,14 +515,52 @@ def fetch_candidates_from_db(
                 songs_query = songs_query.filter(cast(column, Float).between(safe_min, safe_max))
                 print(f" -> SQL Filter: {feat_name} BETWEEN {safe_min:.2f} AND {safe_max:.2f}")
 
-    songs_query = songs_query.order_by(text("RANDOM()"))
-    # Optymalizacja
-    songs_query = songs_query.options(joinedload(models.Song.tags))
+    # songs_query = songs_query.order_by(text("RANDOM()"))
+    # # Optymalizacja
+    # songs_query = songs_query.options(joinedload(models.Song.tags))
 
-    print(f"[DB FETCH]Pobieram losową próbkę {limit} utworów...")
-    songs = songs_query.limit(limit).all()
+    # print(f"[DB FETCH]Pobieram losową próbkę {limit} utworów...")
+    # songs = songs_query.limit(limit).all()
+
+    # ------------------
+    # Random sample
+    total_estimate = songs_query.count()
+
+    if total_estimate <= limit:
+        print(f"[DB FETCH] Pobieram wszytskie utwory spełniające kryteria: {total_estimate}.")
+        songs = songs_query.all()
+
+    else:
+        seed = random.randint(0, 1_000_000)
+        SAMPLE_BUCKETS = 100
+
+        TARGET_BUCKETS = max(
+            1, int(100 * (limit * 1.2) / max(total_estimate, 1))
+        ) # procent rekordów do pobrania
+
+        print(f"[DB FETCH] Pobieram hash-based sample: {TARGET_BUCKETS}% z {total_estimate} rekordów")
+
+        songs_query = songs_query.options(joinedload(models.Song.tags))
+        songs = (
+            songs_query
+            .filter(
+                func.mod(
+                    func.abs(func.hashtext(func.concat(models.Song.song_id, str(seed)))),
+                    SAMPLE_BUCKETS
+                ) < TARGET_BUCKETS
+            )
+            .limit(limit)
+            .all()
+        )
+
+    # ------------------
+    # Fallback jeśli filtr/losowanie zwróci 0 wyników
+    if not songs:
+        print("[DB FETCH] Sampling zwrócił 0 wyników — fallback losowy limit")
+        songs = songs_query.limit(limit).all()
 
 
+    # Tworzenie dataframe
     data = []
     q_pow = engine_config.SCORING_CONFIG.get("query_pow", 1.0)
 

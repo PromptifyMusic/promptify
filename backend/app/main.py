@@ -186,7 +186,8 @@ def search_songs(
     classified_data = engine.classify_phrases_with_gliner(
         text,
         extracted_phrases,
-        model=engine.model_gliner
+        model=engine.model_gliner,
+        threshold=engine.EXTRACTION_CONFIG['gliner_threshold']
     )
 
     queries = engine.prepare_queries_for_e5_separated(classified_data, text)
