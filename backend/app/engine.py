@@ -836,7 +836,7 @@ def fetch_candidates_from_db(
             if hasattr(models.Song, feat_name):
                 column = getattr(models.Song, feat_name)
                 songs_query = songs_query.filter(cast(column, Float).between(safe_min, safe_max))
-                print(f"   -> SQL Filter: {feat_name} BETWEEN {safe_min:.2f} AND {safe_max:.2f}")
+                print(f" -> SQL Filter: {feat_name} BETWEEN {safe_min:.2f} AND {safe_max:.2f}")
 
     #Brak filtrów
     else:
@@ -852,6 +852,15 @@ def fetch_candidates_from_db(
 
     if not songs:
         return pd.DataFrame()
+
+
+    songs_query = songs_query.order_by(text("RANDOM()"))
+    # Optymalizacja
+    songs_query = songs_query.options(joinedload(models.Song.tags))
+
+    print(f"[DB FETCH]Pobieram losową próbkę {limit} utworów...")
+    songs = songs_query.limit(limit).all()
+
 
     data = []
     q_pow = SCORING_CONFIG.get("query_pow", 1.0)
