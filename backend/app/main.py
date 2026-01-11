@@ -15,6 +15,28 @@ from sqlalchemy import text
 from . import engine
 import numpy as np
 import pandas as pd
+from . import engine_config
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- START SERWERA ---
+    print("[STARTUP]Inicjalizacja aplikacji...")
+
+    #1. Otwieramy sesję bazy
+    db = SessionLocal()
+    try:
+        engine.initialize_global_tags(db)
+    finally:
+        db.close()
+
+    yield
+    print("[SHUTDOWN]Zamykanie aplikacji...")
+
+
+app = FastAPI(lifespan=lifespan)
+
 
 load_dotenv()
 
@@ -43,16 +65,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-@app.on_event("startup")
-def startup_event():
-    '''
-    desc: uruchamia się przy starcie serwera, pobiera wektory tagów z bazy a następnie ładuje je do pamięci RAM
-    input: -
-    output: -
-    '''
-    print("[STARTUP]Gotowy.")
 
 
 
@@ -84,7 +96,7 @@ def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Dep
     ROUTING_THRESHOLD = 0.81
 
     for phrase in list(audio_queries):
-        check = engine.map_phrases_to_tags([phrase],db_session=db, threshold=ROUTING_THRESHOLD)
+        check = engine.map_phrases_to_tags([phrase], threshold=ROUTING_THRESHOLD)
         if check:
             found_tag_name = list(check.keys())[0]
             audio_queries.remove(phrase)
@@ -93,7 +105,7 @@ def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Dep
     print(f"[REPLACE] Tagi={tags_queries} | Audio={audio_queries}")
 
 
-    found_tags_map = engine.map_phrases_to_tags(tags_queries,db_session=db)
+    found_tags_map = engine.map_phrases_to_tags(tags_queries)
     query_tag_weights = engine.get_query_tag_weights(found_tags_map)
 
 
@@ -185,20 +197,20 @@ def search_songs(
 
 
 
-    #Sito
-    for phrase in list(audio_queries):
-        check = engine.map_phrases_to_tags([phrase],db_session=db, threshold=0.81)
-
-        if check:
-            found_tag_name = list(check.keys())[0]
-            audio_queries.remove(phrase)
-            tags_queries.append(phrase)
+        # #Sito
+        # for phrase in list(audio_queries):
+        #     check = engine.map_phrases_to_tags([phrase],db_session=db, threshold=0.81)
+        #
+        #     if check:
+        #         found_tag_name = list(check.keys())[0]
+        #         audio_queries.remove(phrase)
+        #         tags_queries.append(phrase)
 
 
 
     print(f"Tagi={tags_queries} | Audio={audio_queries}")
 
-    found_tags_map = engine.map_phrases_to_tags(tags_queries, db_session=db)
+    found_tags_map = engine.map_phrases_to_tags(tags_queries)
     query_tag_weights = engine.get_query_tag_weights(found_tags_map)
 
     criteria_audio = engine.phrases_to_features(audio_queries, search_indices=engine.SEARCH_INDICES, lang_code="pl")
@@ -239,17 +251,17 @@ def search_songs(
 
     working_set = engine.build_working_set(
         tier_a, tier_b, tier_c,
-        target_pool_size=engine.WORKSET_CONFIG['target_pool_size'],
-        min_required_size=engine.WORKSET_CONFIG['min_required_size'],
-        popularity_rescue_ratio=engine.WORKSET_CONFIG['popularity_rescue_ratio']
+        target_pool_size=engine_config.WORKSET_CONFIG['target_pool_size'],
+        min_required_size=engine_config.WORKSET_CONFIG['min_required_size'],
+        popularity_rescue_ratio=engine_config.WORKSET_CONFIG['popularity_rescue_ratio']
     )
 
-    sampling_cfg = engine.SAMPLING_CONFIG.copy()
+    sampling_cfg = engine_config.SAMPLING_CONFIG.copy()
     sampling_cfg['final_n'] = top_n
 
     final_playlist = engine.sample_final_songs(
         working_set,
-        popularity_cfg=engine.POPULARITY_CONFIG,
+        popularity_cfg=engine_config.POPULARITY_CONFIG,
         sampling_cfg=sampling_cfg
     )
 
@@ -266,7 +278,7 @@ def search_songs(
 #Mikolaj
 
 # KONFIGURACJA SPOTIFY
-# Zakres uprawnień (Scope). Musimy poprosić o prawo do edycji playlist.
+# Zakres uprawnień songs_query = songs_query.filter(cast(column, Float).between(safe_min, safe_max))(Scope). Musimy poprosić o prawo do edycji playlist.
 SPOTIFY_SCOPE = "playlist-modify-public playlist-modify-private"
 
 

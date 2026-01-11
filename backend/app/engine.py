@@ -14,76 +14,53 @@ from sqlalchemy.orm import Session, joinedload, load_only
 from . import models
 from sqlalchemy import text, cast, Float,  select
 from pgvector.sqlalchemy import Vector
-
+from . import engine_config
 
 
 DetectorFactory.seed = 0
 
+TAGS_LIST = []
+TAG_VECS = None
 
 
-EXTRACTION_CONFIG = {
-    "gliner_threshold": 0.3,
-    "tag_similarity_threshold": 0.65,
-    "audio_confidence_threshold": 0.78,
-}
+def initialize_global_tags(db: Session):
+    """
+    Pobiera wektory tagów bezpośrednio z kolumny 'tag_embedding' w PostgreSQL (pgvector)
+    i ładuje je do pamięci RAM (NumPy) dla szybkiego wyszukiwania.
+    """
+    global TAGS_LIST, TAG_VECS
 
-SCORING_CONFIG = {
-    # Tagi
-    "use_idf": True,
-    "query_pow": 1.0,
+    print("[ENGINE]Pobieranie wektorów tagów z Bazy Danych (pgvector)...")
 
-    # Fuzja
-    "audio_weight": 0.4,
+    #Pobiera tylko te tagi, które mają policzony wektor
+    tags_data = db.query(models.Tag.name, models.Tag.tag_embedding) \
+        .filter(models.Tag.tag_embedding.isnot(None)) \
+        .all()
 
-}
+    if not tags_data:
+        print("[ENGINE]OSTRZEŻENIE: Brak wektorów w bazie danych!")
+        print("[ENGINE]Uruchom skrypt 'python update_tag_vectors.py', aby je wygenerować.")
+        return
 
+    #2. Konwersja danych z Bazy do NumPy
 
-RETRIEVAL_CONFIG = {
-    "n_candidates": 400,
-    "flat_delta": 0.05,
-}
+    temp_names = []
+    temp_vecs = []
 
+    for name, embedding in tags_data:
+        if embedding is None:
+            continue
 
-WORKSET_CONFIG = {
+        #pgvector zwraca embedding jako zwykłą listę floatów,
 
-    "min_absolute_high": 0.75,
-    "min_absolute_mid": 0.50,
+        temp_names.append(name)
+        temp_vecs.append(np.array(embedding, dtype=np.float32))
 
-    "target_pool_size": 100,
-    # This does not seem to work as intended. It seems to me that its value sets max size rather than min size.
-    # Value set to 50 as temporary workaround. (50 is max size of the playlist I set on frontend)
-    "min_required_size": 50,
+    TAGS_LIST = temp_names
+    TAG_VECS = np.array(temp_vecs)
 
-    "popularity_rescue_ratio": 0.2,
-}
+    print(f"[ENGINE]SUKCES: Załadowano {len(TAG_VECS)} wektorów z bazy do RAM-u.")
 
-POPULARITY_CONFIG = {
-    "p_high": 70,
-    "p_mid": 35,
-
-    "mix": {
-        "high": 0.40,
-        "mid":  0.35,
-        "low":  0.25,
-    },
-
-
-    "forced_popular": 2,
-    "forced_popular_min": 80,
-}
-
-SAMPLING_CONFIG = {
-    "final_n": 15,
-    "alpha": 2.0,
-    "shuffle": True,
-}
-
-
-
-GENERIC_LEMMAS = [
-    "music", "song", "track", "playlist", "list", "recording", "audio", "sound", "style", "vibe", "type", "kind", "number", "piece",
-    "muzyka", "piosenka", "utwór", "kawałek", "lista", "nagranie", "dźwięk", "gatunek", "styl", "klimat", "typ", "rodzaj"
-]
 
 
 
@@ -91,58 +68,18 @@ GENERIC_LEMMAS = [
 
 print("[ENGINE] Ładowanie modeli AI")
 model_e5 = SentenceTransformer('intfloat/multilingual-e5-base')
-model_gliner = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
+model_gliner = GLiNER.from_pretrained("urchade/gliner_multi-v2.1")
 
 
 nlp_pl = spacy.load("pl_core_news_lg")
 nlp_en = spacy.load("en_core_web_md")
 
 
-TAG_VECS = None
-TAGS_LIST = None
-def initialize_global_tags(db: Session):
-
-    global TAG_VECS, TAGS_LIST
-    print("[ENGINE] Pobieranie wektorów tagów z Bazy do RAMu...")
-
-    tags_db = db.query(models.Tag).filter(models.Tag.tag_embedding.isnot(None)).all()
-
-    if tags_db:
-        TAGS_LIST = [t.name for t in tags_db]
-        TAG_VECS = np.array([t.tag_embedding for t in tags_db], dtype=np.float32)
-        print(f"[ENGINE] Sukces: Załadowano {len(TAGS_LIST)} tagów do pamięci.")
-    else:
-        print("[ENGINE] Ostrzeżenie: Brak tagów w bazie danych!")
-        TAGS_LIST = []
-        TAG_VECS = np.array([])
-#---------------------------------------------------
 
 
-GENERIC_VERBS = [
 
-    "szukać", "poszukiwać", "chcieć", "pragnąć", "potrzebować", "woleć", "wymagać",
 
-    "być", "mieć", "znajdować", "znaleźć", "słuchać", "posłuchać", "grać", "zależeć",
 
-    "słuchać", "posłuchać", "usłyszeć", "grać", "zagrać", "puszczać", "puścić", "odtworzyć", "zapodać",
-
-    "prosić", "polecić", "polecać", "rekomendować", "sugerować", "zaproponować", "dawać", "dać",
-
-    "search", "look", "find", "want", "need", "desire", "wish", "require",
-
-    "be", "have", "get",
-
-    "listen", "hear", "play", "replay", "stream",
-
-    "give", "recommend", "suggest", "show", "provide",
-]
-
-NEGATION_TERMS = [
-
-    "nie", "bez", "mało", "zero", "ani", "żaden", "brak", "mniej",
-
-    "no", "not", "without", "less", "non", "neither", "nor", "lack", "zero"
-]
 
 
 
@@ -152,7 +89,7 @@ def create_matcher_for_nlp(nlp_instance):
     noun_filter = {
         "POS": {"IN": ["NOUN", "PROPN"]},
         "IS_STOP": False,
-        "LEMMA": {"NOT_IN": GENERIC_LEMMAS}
+        "LEMMA": {"NOT_IN": engine_config.GENERIC_LEMMAS}
     }
 
     matcher.add("FRAZA", [
@@ -171,7 +108,7 @@ def create_matcher_for_nlp(nlp_instance):
         [{"POS": "ADV", "OP": "?"}, {"POS": "ADJ"}, {"POS": "ADP"}, noun_filter],
 
         [
-            {"POS": "VERB", "LEMMA": {"NOT_IN": GENERIC_VERBS}},
+            {"POS": "VERB", "LEMMA": {"NOT_IN": engine_config.GENERIC_VERBS}},
             {"POS": {"IN": ["NOUN", "ADJ", "PRON"]}, "OP": "+"}
         ],
 
@@ -195,7 +132,7 @@ def is_span_negated(doc, start_index, window=2):
     preceding_tokens = doc[lookback:start_index]
 
     for token in preceding_tokens:
-        if token.text.lower() in NEGATION_TERMS:
+        if token.text.lower() in engine_config.NEGATION_TERMS:
             return True
     return False
 
@@ -245,41 +182,9 @@ def extract_relevant_phrases(prompt):
     return unique_phrases
 
 
-LABELS_CONFIG = {
-    "gatunek_muzyczny": {
-        "desc": "rock, pop, jazz, hip hop, metal, indie, alternative, emo, psychedelic, industrial, grunge, punk, pank, postpankowy, post-punk, folk, electronic, experimental, noise music",
-        "route": "TAGS"
-    },
-    "klimat_styl": {
-        "desc": "chill, chillout, mellow, ambient, lounge, dark, beautiful, love",
-        "route": "TAGS"
-    },
-    "typ_utworu": {
-        "desc": "soundtrack, ost, muzyka filmowa, ścieżka dźwiękowa, remix",
-        "route": "TAGS"
-    },
-    "instrument": {
-        "desc": "piano, guitar, drums, violin, bass, saxophone, synthesizer, vocals",
-        "route": "TAGS"
-    },
-    "okres_czasu": {
-        "desc": "80s, 90s, 00s, 2020s, oldies, retro, klasyk, lata 90, lata 80, rok 90, rok 80, rok 70",
-        "route": "TAGS"
-    },
-    "pochodzenie": {
-        "desc": "polish, american, british, french, k-pop, latino, spanish, deutsch",
-        "route": "TAGS"
-    },
 
-    "cecha_audio": {
-        "desc": "sad, happy, fast, slow, danceable, party, energetic, calm, relaxing, loud, quiet, acoustic, electronic, melancholic, gloomy, euphoric, club banger",
-        "route": "AUDIO"
-    }
-}
-
-GLINER_LABELS = [f"{k} ({v['desc']})" for k, v in LABELS_CONFIG.items()]
-ROUTING_MAP = {k: v['route'] for k, v in LABELS_CONFIG.items()}
-
+GLINER_LABELS = [f"{k} ({v['desc']})" for k, v in engine_config.LABELS_CONFIG.items()]
+ROUTING_MAP = {k: v['route'] for k, v in engine_config.LABELS_CONFIG.items()}
 
 
 
@@ -294,26 +199,33 @@ def get_label_config_lists(config):
 
     return gliner_labels, label_mapping
 
-GLINER_LABELS_LIST, GLINER_LABEL_MAP = get_label_config_lists(LABELS_CONFIG)
+GLINER_LABELS_LIST, GLINER_LABEL_MAP = get_label_config_lists(engine_config.LABELS_CONFIG)
 
 
-def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.8):
+def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.30):
     if not spacy_phrases:
         return []
 
+        # Uruchamiamy GLiNER na całym tekście
+        # Dzięki temu odróżni "Rock" (gatunek) od "Szybka" (audio)
     gliner_predictions = model.predict_entities(prompt, GLINER_LABELS_LIST, threshold=threshold)
 
     results = []
 
+    # Iterujemy po frazach ze spaCy i szukamy dla nich etykiety w wynikach GLiNERa
     for phrase in spacy_phrases:
         matched_category = None
-        matched_route = "AUDIO"
+        matched_route = "AUDIO"  # Domyślny routing
 
+        # Normalizacja frazy spaCy do porównania
         phrase_lower = phrase.lower().strip()
 
+        # Szukamy czy ta fraza została też znaleziona przez GLiNERa
+        # Sprawdzamy czy tekst encji GLiNERa zawiera się w frazie spaCy lub odwrotnie
         best_score = 0
 
-        if any(x in phrase_lower for x in ["lat", "rok", "80", "90", "00", "70"]) and any(char.isdigit() for char in phrase_lower):
+        if any(x in phrase_lower for x in ["lat", "rok", "80", "90", "00", "70"]) and any(
+                char.isdigit() for char in phrase_lower):
             matched_category = "okres_czasu"
             matched_route = "TAGS"
             print(f"[RULE:TIME] '{phrase}' wymuszono kategorię TAGS")
@@ -321,17 +233,22 @@ def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.8):
         for entity in gliner_predictions:
             entity_lower = entity['text'].lower().strip()
 
+            # Sprawdzenie pokrycia (overlap)
             if phrase_lower in entity_lower or entity_lower in phrase_lower:
+                # Jeśli mamy dopasowanie, pobieramy czystą nazwę kategorii
                 full_label = entity['label']
                 short_key = GLINER_LABEL_MAP.get(full_label)
 
                 if short_key:
                     matched_category = short_key
-                    matched_route = LABELS_CONFIG[short_key]['route']
-                    break
+                    # Pobieramy routing z konfiguracji
+                    matched_route = engine_config.LABELS_CONFIG[short_key]['route']
+                    break  # Znaleźliśmy etykietę, idziemy do następnej frazy spaCy
 
+        # Jeśli GLiNER nic nie znalazł dla tej frazy, ale spaCy ją wykryło
+        # oznaczamy jako ogólną "cecha_audio" (w dalszych etapach E5 może ją oznaszyć jako "śmieć")
         if not matched_category:
-            matched_category = "cecha_audio"
+            matched_category = "cecha_audio"  # Fallback
             matched_route = "AUDIO"
 
         results.append({
@@ -339,6 +256,7 @@ def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.8):
             "category": matched_category,
             "route": matched_route
         })
+
     return results
 
 
@@ -356,255 +274,6 @@ def prepare_queries_for_e5_separated(classified_data, original_prompt):
         ]
     }
 
-
-
-FEATURE_DESCRIPTIONS = {
-    'valence': [
-        # ((Min, Max), "Opis")
-        ((0.0, 0.25), "very low valence, very sad, melancholic, dark, gloomy emotional mood music - bardzo smutna, dołująca, ponura, depresyjna, mroczna"),
-        ((0.25, 0.40), "low valence, bittersweet, thoughtful, introspective, moody emotional mood music - smutnawa, nostalgiczna, refleksyjna, nastrojowa, melancholijna"),
-        # ((0.45, 0.60), "medium valence, neutral emotional mood, neither clearly happy nor clearly sad music"),
-        ((0.70, 0.90), "high valence, positive, pleasant, warm, cheerful, uplifting emotional mood music - wesoła, pozytywna, radosna, przyjemna, ciepła, optymistyczna"),
-        ((0.90, 1.0), "very high valence, very happy, joyful, exstatic, euphoric, bright, feel-good emotional mood music - bardzo wesoła, euforyczna, ekstatyczna, pełna radości, szczęśliwa")
-    ],
-
-    'danceability': [
-        ((0.0, 0.25), "very low danceability, not danceable, abstract or experimental, weak or irregular rhythm music - nie do tańca, nietaneczna, nieregularny rytm, abstrakcyjna, bez rytmu"),
-        ((0.25, 0.4), "low danceability, little groove, minimal rhythm, not primarily for dancing music - mało taneczna, słaby rytm, raczej do słuchania niż tańczenia"),
-        # ((0.50, 0.70), "medium danceability, some groove, steady rhythm music"),
-        ((0.80, 0.90), "high danceability, clear beat, strong groove, good for dancing, club-oriented music - taneczna, do tańca, klubowa, dobry rytm, bujająca"),
-        ((0.90, 1.0), "very high danceability, strong groove, infectious rhythm, perfect for dancing, party, club banger music - bardzo taneczna, imprezowa, parkietowa, porywająca do tańca, wixa")
-    ],
-
-    'acousticness': [
-        ((0.0, 0.05), "very low acousticness, fully electronic, synthetic, digital, computer-generated sound music - w pełni elektroniczna, syntetyczna, cyfrowa, syntezatory, techno brzmienie"),
-        ((0.05, 0.25), "low acousticness, mostly electronic with some subtle organic or acoustic elements music - głównie elektroniczna, nowoczesne brzmienie"),
-        # ((0.45, 0.65), "medium acousticness, balanced mix of acoustic and electronic instruments, hybrid sound music"),
-        ((0.65, 0.85), "high acousticness, mostly acoustic, organic, live instruments such as accoustic guitar or piano music - akustyczna, naturalna, żywe instrumenty, gitara, pianino"),
-        ((0.85, 1.0), "very high acousticness, fully acoustic, unplugged, natural, organic instruments only music - w pełni akustyczna, bez prądu, unplugged, naturalne brzmienie")
-    ],
-
-    'n_tempo': [
-        ((0.0, 0.30), "very slow tempo, very slow pace, dragging rhythm music - bardzo wolne tempo, bardzo wolna, ślimacze tempo, ciągnąca się"),
-        ((0.30, 0.45), "slow tempo, downtempo, slow pace, relaxed rhythm music - wolne tempo, wolna, spokojny rytm, powolna"),
-        ((0.45, 0.7), "medium tempo, moderate pace, walking pace music - średnie tempo, umiarkowana szybkość, normalne tempo"),
-        ((0.70, 0.90), "fast tempo, uptempo, quick pace, energetic rhythm music - szybkie tempo, szybka, żwawa, energiczny rytm"),
-        ((0.90, 1.0), "very fast tempo, rapid pace, racing rhythm, frantic speed music - bardzo szybkie tempo, bardzo szybka, pędząca, zawrotna prędkość")
-    ],
-
-    'instrumentalness': [
-        ((0.0, 0.35), "very low instrumentalness, strong presence of vocals and lyrics, clear singing, vocal-focused track - wokalna, z wokalem, śpiewana, piosenka z tekstem, głos"),
-        ((0.35, 0.75), "medium instrumentalness, mix of vocals and instrumental sections, vocals present but not constant - mieszana, trochę śpiewania trochę muzyki"),
-        ((0.75, 1.0), "very high instrumentalness, fully instrumental track, no vocals, no singing, music without lyrics - instrumentalna, bez słów, bez wokalu, sama muzyka, melodia")
-    ],
-
-    'energy': [
-        ((0.0, 0.25), "very low energy, motionless, static, sleep-inducing, minimal activity music - bardzo niska energia, statyczna, usypiająca, bez energii, leniwa"),
-        ((0.25, 0.45), "low energy, relaxed, laid-back, mellow, slow-moving atmosphere music - niska energia, zrelaksowana, luźna, spokojna, chillout"),
-        ((0.45, 0.70), "medium energy, moderate pace, steady rhythm, balanced activity music - średnia energia, umiarkowana, zrównoważona"),
-        ((0.70, 0.90), "high energy, active, driving rhythm, fast-paced, stimulating, busy arrangement music - wysoka energia, energetyczna, żywa, pobudzająca, mocna"),
-        ((0.90, 1.0), "very high energy, hyperactive, restless, frantic, adrenaline-pumping, non-stop action music - bardzo wysoka energia, wybuchowa, szalona, adrenalina, ogień, pompa")
-    ],
-
-    'n_loudness': [
-        ((0.0, 0.25), "very low loudness, barely audible, near silence, whisper-like volume, extremely quiet music - bardzo cicha, ledwo słyszalna, szept, cisza"),
-        ((0.25, 0.50), "low loudness, soft volume, background level, reduced amplitude, delicate sound music - cicha, delikatna, w tle, miękkie brzmienie"),
-        ((0.50, 0.75), "medium loudness, standard volume, normal mastering level music - normalna głośność, standardowa"),
-        ((0.75, 0.90), "high loudness, loud volume, amplified sound, noisy, high amplitude music - głośna, hałaśliwa, mocne brzmienie"),
-        ((0.90, 1.0), "very high loudness, maximum volume, deafening, high decibels music - bardzo głośna, ogłuszająca, maksymalna głośność, huk")
-    ],
-
-    'speechiness': [
-        ((0.0, 0.22), "very low speechiness, purely musical track, no spoken words, fully melodic music - muzyka, melodia, śpiew, mało gadania"),
-        ((0.22, 0.66), "low speechiness, mostly music with occasional spoken words or short background phrases - muzyka ze wstawkami mowy, rap, hip-hop"),
-        ((0.66, 1.0), "medium to high speechiness, balanced mix of speech and music, frequent spoken segments, rap-like or talky structure - dużo gadania, mowa, wywiad, audiobook, podcast, recytacja"),
-    ],
-}
-
-
-
-ACTIVITY_GROUPS = {
-    'deep_focus': {
-        'triggers': [
-            # EN
-            "reading", "reading books", "studying", "learning", "homework",
-            "focus", "concentration", "deep work", "coding", "programming",
-            "writing", "library", "chess", "brainstorming", "thinking",
-            "exam preparation", "working", "office work", "study session",
-            # PL
-            "czytanie", "książki", "nauka", "uczenie się", "praca domowa",
-            "skupienie", "koncentracja", "głęboka praca", "programowanie", "kodowanie",
-            "pisanie", "biblioteka", "szachy", "myślenie", "egzamin", "sesja",
-            "praca biurowa", "do nauki", "do pracy"
-        ],
-        'rules': [
-            ('instrumentalness', (0.8, 1.0)),
-            ('speechiness', (0.0, 0.2)),
-            ('energy', (0.1, 0.5)),
-            ('n_loudness', (0.0, 0.6))
-        ]
-    },
-
-    'sleep_relax': {
-        'triggers': [
-            "sleeping", "falling asleep", "insomnia", "nap", "napping",
-            "meditation", "meditating", "yoga", "mindfulness", "zen",
-            "spa", "massage", "calm down", "anxiety relief", "stress relief",
-            "lying in bed", "winding down", "evening relaxation", "chill out",
-
-            "spanie", "sen", "zasypianie", "bezsenność", "drzemka",
-            "medytacja", "joga", "uważność", "spa", "masaź",
-            "spokój", "stres", "leżenie w łóżku", "wieczorny relaks",
-            "odpoczynek", "wyciszenie", "do spania", "kołysanka"
-        ],
-        'rules': [
-            ('energy', (0.0, 0.25)),
-            ('n_tempo', (0.0, 0.35)),
-            ('n_loudness', (0.0, 0.35)),
-            ('acousticness', (0.5, 1.0)),
-            ('valence', (0.4, 0.7))
-        ]
-    },
-
-    'workout_intense': {
-        'triggers': [
-            "gym", "weightlifting", "crossfit", "boxing", "kickboxing",
-            "hiit", "interval training", "sprint", "running fast", "cardio",
-            "beast mode", "motivation", "pump up", "hardcore training",
-            "powerlifting", "bodybuilding", "marathon training",
-
-            "siłownia", "ciężary", "boks", "interwały", "sprint",
-            "bieganie", "szybki bieg", "kardio", "motywacja", "trening",
-            "mocny trening", "kulturystyka", "maraton", "ćwiczenia",
-            "na siłkę", "pompa"
-        ],
-        'rules': [
-            ('energy', (0.8, 1.0)),
-            ('n_tempo', (0.7, 1.0)),
-            ('n_loudness', (0.7, 1.0)),
-            ('danceability', (0.5, 0.9))
-        ]
-    },
-
-    'commute_jogging': {
-        'triggers': [
-            "jogging", "walking", "walking the dog", "commuting", "driving",
-            "road trip", "car ride", "night drive", "highway", "bus ride",
-            "train ride", "traveling", "subway", "city walk", "bike riding",
-            "cycling",
-
-            "jogging", "trucht", "spacer", "spacer z psem", "dojazd", "jazda autem",
-            "samochód", "podróż", "nocna jazda", "autostrada", "autobus",
-            "pociąg", "metro", "miasto", "rower", "jazda na rowerze",
-            "kierowanie", "za kółkiem"
-        ],
-        'rules': [
-            ('energy', (0.5, 0.8)),
-            ('n_tempo', (0.45, 0.7)),
-            ('valence', (0.4, 0.9))
-        ]
-    },
-
-    'party_club': {
-        'triggers': [
-
-            "party", "house party", "clubbing", "dancing", "dancefloor",
-            "friday night", "saturday night", "birthday", "celebration",
-            "drinking", "pre-game", "getting ready", "festival", "rave",
-            "disco", "summer party", "pool party",
-
-            "impreza", "domówka", "klub", "taniec", "parkiet",
-            "piątek wieczór", "sobota", "urodziny", "świętowanie",
-            "picie", "bifor", "festiwal", "dyskoteka", "letnia impreza",
-            "basen", "do tańca", "wixa"
-        ],
-        'rules': [
-            ('danceability', (0.8, 1.0)),
-            ('energy', (0.8, 1.0)),
-            ('valence', (0.6, 1.0)),
-            ('n_loudness', (0.7, 1.0))
-        ]
-    },
-
-    'chores_background': {
-        'triggers': [
-
-            "cleaning", "cleaning the house", "cooking", "kitchen",
-            "doing dishes", "gardening", "chores", "housework",
-            "morning coffee", "breakfast", "sunday morning",
-            "hanging out", "friends coming over", "dinner party", "barbecue",
-
-            "sprzątanie", "porządki", "gotowanie", "kuchnia",
-            "zmywanie", "ogród", "prace domowe", "obowiązki",
-            "poranna kawa", "śniadanie", "niedziela rano",
-            "spotkanie ze znajomymi", "obiad", "grill", "tło",
-            "w tle", "do kawy"
-        ],
-        'rules': [
-            ('energy', (0.4, 0.7)),
-            ('valence', (0.5, 0.9)),
-            ('danceability', (0.4, 0.8)),
-            ('acousticness', (0.2, 0.8))
-        ]
-    },
-
-    'sad_emotional': {
-        'triggers': [
-
-            "sad", "crying", "depression", "depressed", "lonely",
-            "heartbreak", "breakup", "missing someone", "rainy day",
-            "melancholy", "grieving", "emotional", "moody", "nostalgia",
-            "bad day",
-
-            "smutek", "płacz", "depresja", "samotność",
-            "złamane serce", "rozstanie", "tęsknota", "deszczowy dzień",
-            "melancholia", "żałoba", "emocje", "nostalgia",
-            "zły dzień", "doła", "smutna"
-        ],
-        'rules': [
-            ('valence', (0.0, 0.3)),
-            ('energy', (0.0, 0.4)),
-            ('danceability', (0.0, 0.4)),
-            ('n_tempo', (0.0, 0.4))
-        ]
-    },
-
-    'romance': {
-        'triggers': [
-
-            "date night", "romantic dinner",
-            "candlelight", "intimacy", "cuddling", "boyfriend", "girlfriend",
-            "valentine", "sexy", "seduction", "late night", "bedroom",
-
-            "randka", "romantyczna kolacja",
-            "świece", "nastrojowa", "intymność", "przytulanie", "chłopak", "dziewczyna",
-            "walentynki", "seks", "sypialnia", "wieczór we dwoje", "miłość"
-        ],
-        'rules': [
-            ('n_tempo', (0.1, 0.5)),
-            ('danceability', (0.5, 0.8)),
-            ('energy', (0.2, 0.6)),
-            ('n_loudness', (0.2, 0.6))
-        ]
-    },
-
-    'gaming': {
-        'triggers': [
-
-            "gaming", "playing games", "esports", "streaming", "twitch",
-            "league of legends", "fortnite", "fps", "rpg", "cyberpunk",
-            "hacker", "futuristic",
-
-            "granie", "gry", "esport", "stream",
-            "strzelanki", "haker", "futurystyczna", "do grania", "gierki"
-        ],
-        'rules': [
-            ('energy', (0.7, 1.0)),
-            ('acousticness', (0.0, 0.2)),
-            ('speechiness', (0.0, 0.3))
-        ]
-    }
-}
 
 
 def prepare_search_indices(model, feature_descriptions, activity_groups):
@@ -628,7 +297,7 @@ def prepare_search_indices(model, feature_descriptions, activity_groups):
     print(f"[SUCCESS] Zainicjalizowano {len(indices['AUDIO'])} cech audio i {len(indices['ACTIVITY'])} grup aktywności.")
     return indices
 
-SEARCH_INDICES = prepare_search_indices(model_e5, FEATURE_DESCRIPTIONS, ACTIVITY_GROUPS)
+SEARCH_INDICES = prepare_search_indices(model_e5, engine_config.FEATURE_DESCRIPTIONS, engine_config.ACTIVITY_GROUPS)
 
 
 def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
@@ -676,7 +345,7 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
                 if sims[idx] > best_audio_score:
                     best_audio_score = sims[idx]
                     best_audio_key = feat
-                    best_audio_val = FEATURE_DESCRIPTIONS[feat][idx][0]
+                    best_audio_val = engine_config.FEATURE_DESCRIPTIONS[feat][idx][0]
 
         if search_scope in ["ACTIVITY_ONLY", "BOTH"]:
             for group, embs in ACTIVITY_INDEX.items():
@@ -710,8 +379,8 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
 
     found_activities.sort(key=lambda x: x[1])
     for group, score in found_activities:
-        if group in ACTIVITY_GROUPS:
-            for r_feat, r_val in ACTIVITY_GROUPS[group]['rules']:
+        if group in engine_config.ACTIVITY_GROUPS:
+            for r_feat, r_val in engine_config.ACTIVITY_GROUPS[group]['rules']:
                 merged[r_feat] = {'value': r_val, 'confidence': float(score)}
 
     for feat, val, score in found_explicit_audio:
@@ -736,43 +405,44 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
 
 def map_phrases_to_tags(
     phrases: list[str],
-    db_session: Session,
+    #db_session: Session,
     model=model_e5,
     threshold: float = 0.65
 ) -> dict[str, float]:
 
     if threshold is None:
-        threshold = EXTRACTION_CONFIG["tag_similarity_threshold"]
+        threshold = engine_config.EXTRACTION_CONFIG["tag_similarity_threshold"]
 
-    if not phrases:
+    if not phrases or TAG_VECS is None or len(TAG_VECS) == 0:
+        if TAG_VECS is None:
+            print("[ENGINE]Wektory tagów nie są załadowane")
         return {}
 
+    print(f"[ENGINE]Mapowanie Hybrydowe: {phrases}")
+
+    q_vecs = model.encode(
+        [f"query: {p}" for p in phrases],
+        convert_to_numpy=True,
+        normalize_embeddings=True
+    )
+    sims = cosine_similarity(TAG_VECS, q_vecs)
     found_tags = {}
 
-    print(f"[ENGINE] Mapowanie w pgvector (NumPy): {phrases}")
+    for i, phrase in enumerate(phrases):
+        # Pobieramy kolumnę wyników dla danej frazy
+        col = sims[:, i]
 
-    for phrase in phrases:
-        query_vec = model.encode(f"query: {phrase}", normalize_embeddings=True).tolist()
+        # Znajdujemy indeks najlepszego dopasowania
+        best_idx = np.argmax(col)
+        best_score = float(col[best_idx])
 
-        distance_expr = models.Tag.tag_embedding.cosine_distance(query_vec)
+        # Bierzemy nazwę tagu z listy załadowanej z bazy
+        best_tag_name = TAGS_LIST[best_idx]
 
-        stmt = (
-            select(models.Tag, distance_expr.label("dist"))
-            .order_by(distance_expr)
-            .limit(1)
-        )
-        row = db_session.execute(stmt).first()
-
-        if row:
-            best_tag, best_dist = row
-            t_name = best_tag.name
-            similarity = 1.0 - float(best_dist)
-
-            if similarity >= threshold:
-                print(f"[DB MATCH] '{phrase}' -> '{t_name}' ({similarity:.3f})")
-                found_tags[t_name] = max(found_tags.get(t_name, 0), similarity)
-            else:
-                pass
+        if best_score >= threshold:
+            print(f"   MATCH: '{phrase}' -> '{best_tag_name}' ({best_score:.3f})")
+            # Zapisujemy wynik (jeśli tag się powtarza, bierzemy wyższy wynik)
+            found_tags[best_tag_name] = max(found_tags.get(best_tag_name, 0), best_score)
 
     return found_tags
 
@@ -797,7 +467,7 @@ def fetch_candidates_from_db(
         limit: int = 2000
 ) -> pd.DataFrame:
     if limit is None:
-        limit = RETRIEVAL_CONFIG["n_candidates"]
+        limit = engine_config.RETRIEVAL_CONFIG["n_candidates"]
 
     songs_query = db.query(models.Song)
     print(limit);
@@ -847,7 +517,7 @@ def fetch_candidates_from_db(
 
 
     data = []
-    q_pow = SCORING_CONFIG.get("query_pow", 1.0)
+    q_pow = engine_config.SCORING_CONFIG.get("query_pow", 1.0)
 
     for s in songs:
         current_score = 0.0
