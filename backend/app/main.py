@@ -174,7 +174,8 @@ def search_songs(
     classified_data = engine.classify_phrases_with_gliner(
         text,
         extracted_phrases,
-        model=engine.model_gliner
+        model=engine.model_gliner,
+        threshold=engine.EXTRACTION_CONFIG['gliner_threshold']
     )
 
     queries = engine.prepare_queries_for_e5_separated(classified_data, text)
@@ -186,13 +187,13 @@ def search_songs(
 
 
     #Sito
-    for phrase in list(audio_queries):
-        check = engine.map_phrases_to_tags([phrase],db_session=db, threshold=0.81)
+    # for phrase in list(audio_queries):
+    #     check = engine.map_phrases_to_tags([phrase],db_session=db, threshold=0.81)
 
-        if check:
-            found_tag_name = list(check.keys())[0]
-            audio_queries.remove(phrase)
-            tags_queries.append(phrase)
+    #     if check:
+    #         found_tag_name = list(check.keys())[0]
+    #         audio_queries.remove(phrase)
+    #         tags_queries.append(phrase)
 
 
 

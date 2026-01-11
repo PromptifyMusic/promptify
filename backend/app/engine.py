@@ -92,7 +92,8 @@ GENERIC_LEMMAS = [
 
 print("[ENGINE] Ładowanie modeli AI")
 model_e5 = SentenceTransformer('intfloat/multilingual-e5-base')
-model_gliner = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
+# model_gliner = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
+model_gliner = GLiNER.from_pretrained("urchade/gliner_multi-v2.1")
 
 
 nlp_pl = spacy.load("pl_core_news_lg")
@@ -298,7 +299,7 @@ def get_label_config_lists(config):
 GLINER_LABELS_LIST, GLINER_LABEL_MAP = get_label_config_lists(LABELS_CONFIG)
 
 
-def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.8):
+def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.3):
     if not spacy_phrases:
         return []
 
