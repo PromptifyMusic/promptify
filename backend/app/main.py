@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from sqlalchemy import text
 from . import engine
 import numpy as np
+import pandas as pd
 
 load_dotenv()
 
@@ -203,7 +204,27 @@ def search_songs(
     criteria_audio = engine.phrases_to_features(audio_queries, search_indices=engine.SEARCH_INDICES, lang_code="pl")
 
     candidates_df = engine.fetch_candidates_from_db(query_tag_weights, db, criteria_audio)
+#---------------------
+    current_count = len(candidates_df)
 
+    if current_count < top_n:
+        needed = top_n - current_count
+        print(
+            f"[API]Znaleziono tylko {current_count} idealnych pasowań. Dobieram {needed}")
+
+        # Pobieramy zapasowe piosenki (Tylko po Audio, ignorując Tagi)
+        # Limitujemy np. x2 żeby mieć z czego wybierać
+        backup_df = engine.fetch_candidates_from_db({}, db, criteria_audio, limit=needed * 3)
+
+        candidates_df = pd.concat([candidates_df, backup_df]).drop_duplicates(subset=['spotify_id'])
+
+        if len(candidates_df) < top_n:
+            needed_panic = top_n - len(candidates_df)
+            print(f"[API]Dobieram {needed_panic} losowych")
+            random_df = engine.fetch_candidates_from_db({}, db, limit=needed_panic * 2)
+            candidates_df = pd.concat([candidates_df, random_df]).drop_duplicates(subset=['spotify_id'])
+
+#-----------------
     if candidates_df.empty:
         print("[API] Brak wyników po tagach. Pobieranie puli zapasowej.")
         candidates_df = engine.fetch_candidates_from_db({}, db, criteria_audio,  limit=200)
