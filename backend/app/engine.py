@@ -103,7 +103,10 @@ def create_matcher_for_nlp(nlp_instance):
     matcher.add("FRAZA", [
         [noun_filter],
 
-        [{"POS": "ADJ"}, noun_filter],
+        [
+            {"POS": "ADJ", "LEMMA": {"IN": engine_config.GENRE_MODIFIERS}}, 
+            noun_filter
+        ],
 
         [{"POS": "ADV", "OP": "?"}, {"POS": "ADP"}, noun_filter],
 
@@ -111,19 +114,11 @@ def create_matcher_for_nlp(nlp_instance):
 
         [{"POS": "ADJ", "IS_STOP": False}],
 
-        # [{"POS": {"IN": ["NOUN", "PROPN"]}, "IS_STOP": False}, noun_filter],
         [noun_filter, noun_filter],
 
         [{"POS": "ADV", "OP": "?"}, {"POS": "ADJ"}, {"POS": "ADP"}, noun_filter],
 
-        # [
-        #     {"POS": "VERB", "LEMMA": {"NOT_IN": GENERIC_VERBS}},
-        #     {"POS": {"IN": ["NOUN", "ADJ", "PRON"]}, "OP": "+"}
-        # ],
         [
-            # {"POS": "VERB", "LEMMA": {"NOT_IN": engine_config.GENERIC_VERBS}},
-            # {"POS": {"IN": ["NOUN", "ADJ", "PRON"]}, "OP": "+"},
-
             {"POS": "VERB", "LEMMA": {"NOT_IN": engine_config.GENERIC_VERBS}},
             {"POS": {"IN": ["NOUN", "PROPN", "ADJ"]}, "IS_STOP": False, "LEMMA": {"NOT_IN": engine_config.GENERIC_LEMMAS}, "OP": "+"}
         ],

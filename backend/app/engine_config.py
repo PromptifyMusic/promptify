@@ -93,6 +93,22 @@ NEGATION_TERMS = [
 ]
 
 
+GENRE_MODIFIERS = [
+    # eng
+    "post", "hard", "heavy", "soft", "pop", "alt", "alternative", "indie", 
+    "nu", "neo", "progressive", "psychedelic", "acid", "experimental", 
+    "symphonic", "death", "black", "thrash", "doom", "power", "speed", 
+    "glam", "gothic", "tech", "deep", "classic", "modern", "electronic", 
+    "industrial", "melodic", "folk", "lo-fi", "lofi", "ambient", "synth",
+    "electro", "acoustic", "instrumental", "gangsta", "brit", "new", "dark",
+    
+    # pl
+    "alternatywny", "progresywny", "psychodeliczny", "symfoniczny", 
+    "ciężki", "klasyczny", "elektroniczny", "gotycki", "melodyjny", 
+    "eksperymentalny", "współczesny", "industrialny", "akustyczny",
+    "instrumentalny", "polski", "zagraniczny"
+]
+
 
 LABELS_CONFIG = {
     "gatunek_muzyczny": {
