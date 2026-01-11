@@ -212,8 +212,7 @@ def search_songs(
         print(
             f"[API]Znaleziono tylko {current_count} idealnych pasowań. Dobieram {needed}")
 
-        # Pobieramy zapasowe piosenki (Tylko po Audio, ignorując Tagi)
-        # Limitujemy np. x2 żeby mieć z czego wybierać
+        # Pobieramy zapasowe piosenki)
         backup_df = engine.fetch_candidates_from_db({}, db, criteria_audio, limit=needed * 3)
 
         candidates_df = pd.concat([candidates_df, backup_df]).drop_duplicates(subset=['spotify_id'])
