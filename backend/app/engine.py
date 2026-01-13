@@ -16,7 +16,7 @@ from . import models
 from sqlalchemy import text, cast, Float,  select, func
 from pgvector.sqlalchemy import Vector
 from . import engine_config
-
+import time
 
 DetectorFactory.seed = 0
 
@@ -24,7 +24,7 @@ TAGS_LIST = []
 TAG_VECS = None
 
 
-def initialize_global_tags(db: Session):
+def initialize_global_tags(db: Session, retries=6, delay=5):
     """
     Pobiera wektory tagów bezpośrednio z kolumny 'tag_embedding' w PostgreSQL (pgvector)
     i ładuje je do pamięci RAM (NumPy) dla szybkiego wyszukiwania.
@@ -33,14 +33,26 @@ def initialize_global_tags(db: Session):
 
     print("[ENGINE]Pobieranie wektorów tagów z Bazy Danych (pgvector)...")
 
-    #Pobiera tylko te tagi, które mają policzony wektor
-    tags_data = db.query(models.Tag.name, models.Tag.tag_embedding) \
-        .filter(models.Tag.tag_embedding.isnot(None)) \
-        .all()
+    tags_data = []
+
+    # Pętla ponawiania (Retry Loop)
+    for attempt in range(retries):
+        tags_data = db.query(models.Tag.name, models.Tag.tag_embedding) \
+            .filter(models.Tag.tag_embedding.isnot(None)) \
+            .all()
+
+        if tags_data:
+            print(f"[ENGINE] Pobrano dane za {attempt + 1}. próbą.")
+            break
+        else:
+            print(f"[ENGINE] ⚠️ Próba {attempt + 1}/{retries}: Baza wektorów jest pusta/niegotowa. Czekam {delay}s...")
+            time.sleep(delay)
 
     if not tags_data:
-        print("[ENGINE]OSTRZEŻENIE: Brak wektorów w bazie danych!")
-        print("[ENGINE]Uruchom skrypt 'python update_tag_vectors.py', aby je wygenerować.")
+        print("[ENGINE] BŁĄD KRYTYCZNY: Nie udało się załadować wektorów po wielu próbach.")
+        print("[ENGINE] Upewnij się, że skrypt 'update_tag_vectors.py' został wykonany.")
+        TAGS_LIST = []
+        TAG_VECS = None
         return
 
     #2. Konwersja danych z Bazy do NumPy
@@ -51,9 +63,6 @@ def initialize_global_tags(db: Session):
     for name, embedding in tags_data:
         if embedding is None:
             continue
-
-        #pgvector zwraca embedding jako zwykłą listę floatów,
-
         temp_names.append(name)
         temp_vecs.append(np.array(embedding, dtype=np.float32))
 
@@ -149,26 +158,28 @@ def is_span_negated(doc, start_index, window=2):
 
 
 
-def extract_relevant_phrases(prompt):
+
+#zmieniam
+def extract_relevant_phrases(prompt, current_nlp, current_matcher):
     prompt = prompt.lower()
     prompt_clean = prompt.strip()
 
     if not prompt_clean:
         return []
-
-    try:
-        lang_code = detect(prompt)
-    except:
-        lang_code = 'pl'
-
-    if lang_code == 'en':
-        current_nlp = nlp_en
-        current_matcher = matcher_en
-        lang_msg = "EN"
-    else:
-        current_nlp = nlp_pl
-        current_matcher = matcher_pl
-        lang_msg = "PL"
+    #
+    # try:
+    #     lang_code = detect(prompt)
+    # except:
+    #     lang_code = 'pl'
+    #
+    # if lang_code == 'en':
+    #     current_nlp = nlp_en
+    #     current_matcher = matcher_en
+    #     lang_msg = "EN"
+    # else:
+    #     current_nlp = nlp_pl
+    #     current_matcher = matcher_pl
+    #     lang_msg = "PL"
 
     doc = current_nlp(prompt)
 
@@ -190,7 +201,7 @@ def extract_relevant_phrases(prompt):
 
     unique_phrases = sorted(list(set([p.strip() for p in final_phrases if len(p.strip()) > 2])))
 
-    print(f"[{lang_msg}] Prompt: '{prompt}' \n-> {unique_phrases}")
+    #print(f"[{lang_msg}] Prompt: '{prompt}' \n-> {unique_phrases}")
 
     return unique_phrases
 
@@ -214,8 +225,20 @@ def get_label_config_lists(config):
 
 GLINER_LABELS_LIST, GLINER_LABEL_MAP = get_label_config_lists(engine_config.LABELS_CONFIG)
 
+#nowe
 
-def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.3):
+for tag, keywords in engine_config.LANGUAGE_CONFIG.items():
+    for word in keywords:
+        engine_config.LEMMA_TO_TAG_MAP[word] = tag
+
+
+for genre, keywords in engine_config.GENRE_LEMMA_CONFIG.items():
+    for word in keywords:
+        engine_config.LEMMA_TO_GENRE_MAP[word] = genre
+
+
+
+def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.15):
     if not spacy_phrases:
         return []
 
@@ -228,17 +251,67 @@ def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.3):
     # Iterujemy po frazach ze spaCy i szukamy dla nich etykiety w wynikach GLiNERa
     for phrase in spacy_phrases:
         matched_category = None
-        matched_route = "AUDIO"
+        matched_route = "AUDIO"  # Domyślny routing
 
+        # Normalizacja frazy spaCy do porównania
         phrase_lower = phrase.lower().strip()
 
-        best_score = 0
+        # Szukamy czy ta fraza została też znaleziona przez GLiNERa
+        # Sprawdzamy czy tekst encji GLiNERa zawiera się w frazie spaCy lub odwrotnie
+        # best_score = 0
 
+        # lematyzacja
+        doc_temp = nlp_pl(phrase_lower)
+
+        # JĘZYK/KRAJ
+        for token in doc_temp:
+            lemma = token.lemma_.lower()  # Pobieramy formę podstawową
+
+            if lemma in engine_config.LEMMA_TO_TAG_MAP:
+                matched_category = "geographical_location"
+                matched_route = "TAGS"
+                break
+
+        if matched_category:
+            results.append({
+                "phrase": phrase,
+                "category": matched_category,
+                "route": matched_route,
+            })
+            continue
+
+        # POPULARNE GATUNKI
+        for genre_key, phrases in engine_config.GENRE_PHRASES_EXACT.items():
+            for exact_phrase in phrases:
+                if exact_phrase in phrase_lower:
+                    matched_category = "music_genre"
+                    matched_route = "TAGS"
+                    meta_data = {"genre": genre_key}
+                    break
+            if matched_category: break
+
+        # 2. Jeśli nie znaleziono frazy, sprawdzamy LEMATY pojedynczych słów
+        if not matched_category:
+            for token in doc_temp:
+                lemma = token.lemma_.lower()
+
+                # Sprawdzamy w mapie gatunków
+                if lemma in engine_config.LEMMA_TO_GENRE_MAP:
+                    matched_category = "music_genre"
+                    matched_route = "TAGS"
+                    break
+
+        if matched_category:
+            results.append({"phrase": phrase, "category": matched_category, "route": matched_route})
+            continue
+
+        # CZAS/DEKADA
         if any(x in phrase_lower for x in ["lat", "rok", "80", "90", "00", "70"]) and any(
                 char.isdigit() for char in phrase_lower):
             matched_category = "okres_czasu"
             matched_route = "TAGS"
             print(f"[RULE:TIME] '{phrase}' wymuszono kategorię TAGS")
+            continue
 
         for entity in gliner_predictions:
             entity_lower = entity['text'].lower().strip()
@@ -466,27 +539,25 @@ def get_query_tag_weights(raw_tags):
 
 #najalpej bez limitu
 
+
+
+
 def fetch_candidates_from_db(
         tag_scores: dict[str, float],
         db: Session,
         audio_constraints: list = None,
         limit: int = 2000
 ) -> pd.DataFrame:
+
     if limit is None:
         limit = engine_config.RETRIEVAL_CONFIG["n_candidates"]
 
-    songs_query = db.query(models.Song).distinct()
-    print(limit);
+    songs_query = db.query(models.Song)
 
-
-    #
     if tag_scores:
         tags_list = list(tag_scores.keys())
-        print(f"[DB FETCH]Pobieram po tagach: {tags_list}")
-
-        songs_query = songs_query.join(models.Song.tags) \
-            .filter(models.Tag.name.in_(tags_list)) \
-            .options(joinedload(models.Song.tags))
+        print(f"[DB FETCH] Pobieram po tagach: {tags_list}")
+        songs_query = songs_query.join(models.Song.tags).filter(models.Tag.name.in_(tags_list))
 
 
     if audio_constraints:
@@ -510,49 +581,106 @@ def fetch_candidates_from_db(
                 songs_query = songs_query.filter(cast(column, Float).between(safe_min, safe_max))
                 print(f" -> SQL Filter: {feat_name} BETWEEN {safe_min:.2f} AND {safe_max:.2f}")
 
-    # songs_query = songs_query.order_by(text("RANDOM()"))
-    # # Optymalizacja
-    # songs_query = songs_query.options(joinedload(models.Song.tags))
-
-    # print(f"[DB FETCH]Pobieram losową próbkę {limit} utworów...")
-    # songs = songs_query.limit(limit).all()
-
-    # ------------------
+    songs = []
     # Random sample
-    total_estimate = songs_query.count()
+    if tag_scores:
+        print(f"[DB FETCH] Strategia: RANKING (Najlepsze dopasowania).")
+        # KROK 1: Pobieramy TYLKO ID piosenek, żeby uniknąć błędu "GroupingError"
+        # Używamy with_entities, żeby nadpisać SELECT na samo ID
+        id_query = songs_query.with_entities(models.Song.song_id)
 
-    if total_estimate <= limit:
-        print(f"[DB FETCH] Pobieram wszytskie utwory spełniające kryteria: {total_estimate}.")
-        songs = songs_query.all()
-
-    else:
-        seed = random.randint(0, 1_000_000)
-        SAMPLE_BUCKETS = 100
-
-        TARGET_BUCKETS = max(
-            1, int(100 * (limit * 1.2) / max(total_estimate, 1))
-        ) # procent rekordów do pobrania
-
-        print(f"[DB FETCH] Pobieram hash-based sample: {TARGET_BUCKETS}% z {total_estimate} rekordów")
-
-        songs_query = songs_query.options(joinedload(models.Song.tags))
-        songs = (
-            songs_query
-            .filter(
-                func.mod(
-                    func.abs(func.hashtext(func.concat(models.Song.song_id, str(seed)))),
-                    SAMPLE_BUCKETS
-                ) < TARGET_BUCKETS
+        ranked_ids_tuples = (
+            id_query
+            .group_by(models.Song.song_id)
+            .order_by(
+                func.count(models.Song.song_id).desc(),  # Najważniejsze: liczba trafień
+                func.random()  # Losowość przy remisie
             )
             .limit(limit)
             .all()
         )
+        # Wyciągamy same ID z krotek
+        ranked_ids = [r[0] for r in ranked_ids_tuples]
 
-    # ------------------
-    # Fallback jeśli filtr/losowanie zwróci 0 wyników
+        if ranked_ids:
+            # KROK 2: Pobieramy pełne obiekty dla znalezionych ID
+            # Joinedload przyspieszy pobieranie tagów
+            unordered_songs = db.query(models.Song) \
+                .filter(models.Song.song_id.in_(ranked_ids)) \
+                .options(joinedload(models.Song.tags)) \
+                .all()
+
+            # KROK 3: Przywracamy kolejność rankingu (bo IN_ niszczy kolejność)
+            song_map = {s.song_id: s for s in unordered_songs}
+            songs = [song_map[pid] for pid in ranked_ids if pid in song_map]
+
+            print(f"[DEBUG] Pobranno {len(songs)} utworów w 2 krokach.")
+
+            #LOG: TOP 5 UTWORÓW I ICH TAG
+            print(f"\n[DEBUG] --- TOP 5 KANDYDATÓW (Ranking) ---")
+            query_tags_set = set(tag_scores.keys())
+
+            for i, s in enumerate(songs[:5]):
+                # Wyciągamy tagi utworu i sprawdzamy część wspólną z zapytaniem
+                song_tags = {t.name for t in s.tags}
+                matched = song_tags.intersection(query_tags_set)
+                # Reszta tagów (dla kontekstu)
+                other = list(song_tags - matched)[:3]
+
+                print(f" {i + 1}. {s.artist} - {s.name}")
+                print(f"    -> Pasujące tagi ({len(matched)}): {matched}")
+                # print(f"    -> Inne tagi: {other}...") # Opcjonalnie
+            print(f"----------------------------------------\n")
+            # ------------------------------------------
+
+
+
+            # Debug log (opcjonalnie)
+            if songs:
+                top_s = songs[0]
+                matching = {t.name for t in top_s.tags}.intersection(tag_scores.keys())
+                print(f"[DEBUG] Top 1: {top_s.artist} - {top_s.name} (Tagi: {len(matching)})")
+
+
+
+    else:
+        print(f"[DB FETCH] Strategia: SAMPLING (Losowa próbka).")
+
+
+        songs_query = songs_query.distinct()
+        total_estimate = songs_query.count()
+
+        if total_estimate <= limit:
+            print(f"[DB FETCH] Mała pula ({total_estimate}), biorę wszystko.")
+            songs = songs_query.all()
+
+        else:
+            seed = random.randint(0, 1_000_000)
+            SAMPLE_BUCKETS = 100
+
+            TARGET_BUCKETS = max(
+                1, int(100 * (limit * 1.2) / max(total_estimate, 1))
+            ) # procent rekordów do pobrania
+
+            print(f"[DB FETCH] Pobieram hash-based sample: {TARGET_BUCKETS}% z {total_estimate} rekordów")
+
+            songs = (
+                songs_query
+                .filter(
+                    func.mod(
+                        func.abs(func.hashtext(func.concat(models.Song.song_id, str(seed)))),
+                        SAMPLE_BUCKETS
+                    ) < TARGET_BUCKETS
+                )
+                .limit(limit)
+                .all()
+            )
+            if not songs:
+                print("[DB FETCH] Fallback: Random limit.")
+                songs = songs_query.order_by(func.random()).limit(limit).all()
+
     if not songs:
-        print("[DB FETCH] Sampling zwrócił 0 wyników — fallback losowy limit")
-        songs = songs_query.limit(limit).all()
+        return pd.DataFrame()
 
 
     # Tworzenie dataframe
@@ -582,6 +710,7 @@ def fetch_candidates_from_db(
             "acousticness": float(s.acousticness) if s.acousticness is not None else 0.5,
             "instrumentalness": float(s.instrumentalness) if s.instrumentalness is not None else 0.5,
             "tempo": float(s.tempo) if s.tempo is not None else 120.0,
+            "n_loudness": float(s.n_loudness or 0.5),
         })
 
     df = pd.DataFrame(data)

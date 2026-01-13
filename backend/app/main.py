@@ -2,12 +2,14 @@
 import base64
 import os
 from typing import List
+
+from charset_normalizer import detect
 from fastapi import FastAPI, Depends, HTTPException, Query, Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from . import models, schemas
-from .database import SessionLocal, engine
+from .database import SessionLocal, engine as db_engine
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
@@ -18,29 +20,38 @@ import pandas as pd
 from . import engine_config
 from contextlib import asynccontextmanager
 
+load_dotenv()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # --- START SERWERA ---
-    print("[STARTUP]Inicjalizacja aplikacji...")
+    # 1. START: Inicjalizacja tabel i wektorów
+    print("[MAIN] 🚀 Uruchamianie procedur startowych...")
 
-    #1. Otwieramy sesję bazy
+    # Tworzenie tabel w bazie (jeśli nie istnieją)
+    models.Base.metadata.create_all(bind=db_engine)
+
     db = SessionLocal()
     try:
+        # To wywołuje funkcję z engine.py, która ładuje wektory do RAM
+        # Dzięki Twojemu retry loop, to poczeka na zakończenie skryptu
         engine.initialize_global_tags(db)
+    except Exception as e:
+        print(f"[MAIN] ❌ Błąd krytyczny przy ładowaniu tagów: {e}")
     finally:
         db.close()
 
-    yield
-    print("[SHUTDOWN]Zamykanie aplikacji...")
+    yield  # Tu aplikacja działa
+
+    # 2. STOP
+    print("[MAIN] 🛑 Zamykanie aplikacji...")
 
 
+# --- INICJALIZACJA ---
 app = FastAPI(lifespan=lifespan)
 
 
-load_dotenv()
 
-app = FastAPI(title="Songs API")
 
 #Konfiguracja CORS
 app.add_middleware(
@@ -81,11 +92,20 @@ def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Dep
     if request.rejected_song_id:
         exclude_ids.add(request.rejected_song_id)
 
+
+
+
+
+
+
+
+
     extracted_phrases = engine.extract_relevant_phrases(prompt)
 
     classified_data = engine.classify_phrases_with_gliner(
         prompt,
         extracted_phrases,
+
         model=engine.model_gliner
     )
 
@@ -181,13 +201,31 @@ def search_songs(
 
     print(f"\n[API] NOWY PROMPT: '{text}' (Top {top_n})")
 
-    extracted_phrases = engine.extract_relevant_phrases(text)
+
+#zmiana
+    try:
+        lang_code = detect(text)
+    except:
+        lang_code = 'pl'
+
+    if lang_code == 'en':
+        current_nlp = engine.nlp_en
+        current_matcher = engine.matcher_en
+        lang_txt = 'EN'
+    else:
+        current_nlp = engine.nlp_pl
+        current_matcher = engine.matcher_pl
+        lang_txt = 'PL'
+
+#zmiana
+    extracted_phrases = engine.extract_relevant_phrases(text, current_nlp, current_matcher)
+
 
     classified_data = engine.classify_phrases_with_gliner(
         text,
         extracted_phrases,
         model=engine.model_gliner,
-        threshold=engine.EXTRACTION_CONFIG['gliner_threshold']
+        threshold=engine_config.EXTRACTION_CONFIG['gliner_threshold']
     )
 
     queries = engine.prepare_queries_for_e5_separated(classified_data, text)
@@ -198,23 +236,13 @@ def search_songs(
 
 
 
-        # #Sito
-        # for phrase in list(audio_queries):
-        #     check = engine.map_phrases_to_tags([phrase],db_session=db, threshold=0.81)
-        #
-        #     if check:
-        #         found_tag_name = list(check.keys())[0]
-        #         audio_queries.remove(phrase)
-        #         tags_queries.append(phrase)
-
-
 
     print(f"Tagi={tags_queries} | Audio={audio_queries}")
 
     found_tags_map = engine.map_phrases_to_tags(tags_queries)
     query_tag_weights = engine.get_query_tag_weights(found_tags_map)
 
-    criteria_audio = engine.phrases_to_features(audio_queries, search_indices=engine.SEARCH_INDICES, lang_code="pl")
+    criteria_audio = engine.phrases_to_features(audio_queries, search_indices=engine.SEARCH_INDICES, lang_code=lang_code)
 
     candidates_df = engine.fetch_candidates_from_db(query_tag_weights, db, criteria_audio)
 #---------------------

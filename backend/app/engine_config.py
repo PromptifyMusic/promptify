@@ -109,40 +109,146 @@ GENRE_MODIFIERS = [
     "instrumentalny", "polski", "zagraniczny"
 ]
 
-
 LABELS_CONFIG = {
-    "gatunek_muzyczny": {
-        "desc": "rock, pop, jazz, hip hop, metal, indie, alternative, emo, psychedelic, industrial, grunge, punk, pank, postpankowy, post-punk, folk, electronic, experimental, noise music",
-        "route": "TAGS"
-    },
-    "klimat_styl": {
-        "desc": "chill, chillout, mellow, ambient, lounge, dark, beautiful, love",
-        "route": "TAGS"
-    },
-    "typ_utworu": {
-        "desc": "soundtrack, ost, muzyka filmowa, ścieżka dźwiękowa, remix",
-        "route": "TAGS"
-    },
-    "instrument": {
-        "desc": "piano, guitar, drums, violin, bass, saxophone, synthesizer, vocals",
-        "route": "TAGS"
-    },
-    "okres_czasu": {
-        "desc": "80s, 90s, 00s, 2020s, oldies, retro, klasyk, lata 90, lata 80, rok 90, rok 80, rok 70",
-        "route": "TAGS"
-    },
-    "pochodzenie": {
-        "desc": "polish, american, british, french, k-pop, latino, spanish, deutsch",
+    # --- KATEGORIE KIEROWANE DO BAZY TAGÓW (route: TAGS) ---
+
+    "music_genre": {
+        # Usunięto przymiotniki, skupiono się na rzeczownikach oznaczających styl
+        "desc": "music genre, category, style, \
+        rock, pop, jazz, hip hop, rap, metal, indie, alternative, \
+        electronic, classical, reggae, techno, house, folk, blues, \
+        funk, soul, punk, grunge, dubstep, dnb, disco, k-pop, \
+        r&b, experimental, eksperymentalna, lo-fi, ambient",
         "route": "TAGS"
     },
 
-    "cecha_audio": {
-        "desc": "sad, happy, fast, slow, danceable, party, energetic, calm, relaxing, loud, quiet, acoustic, electronic, melancholic, gloomy, euphoric, club banger",
+    "song_type": {
+        "desc": "soundtrack, ost, film score, remix, cover, \
+        live performance, concert, instrumental, acoustic, unplugged, \
+        opening, ending, wersja instrumentalna, na żywo",
+        "route": "TAGS"
+    },
+
+    "musical_instrument": {
+        "desc": "instrument, piano, pianino, guitar, gitara, drums, perkusja, \
+        violin, skrzypce, bass, bas, saxophone, saksofon, synthesizer, syntezator",
+        "route": "TAGS"
+    },
+
+    "vocal_characteristics": {
+        "desc": "vocals, voice type, female vocalist, wokalistka, \
+        male vocalist, wokalista, męski głos, kobiecy głos, choir, chór",
+        "route": "TAGS"
+    },
+
+    "geographical_location": {
+        "desc": "country, origin, language, polish, polska, polski, \
+        american, usa, british, uk, french, francuska, german, spanish, \
+        russian, japanese, korean",
+        "route": "TAGS"
+    },
+
+    "time_period": {
+        "desc": "era, decade, year, 80s, 90s, 00s, 2020s, 70s, 60s, \
+        lata 80, lata 90, lata 70, oldies, retro, klasyk",
+        "route": "TAGS"
+    },
+
+    # --- DANE AUDIO (route: AUDIO) ---
+
+    # "audio_characteristics": {
+    #     "desc": "mood, emotion, tempo, vibe, atmosphere, \
+    #     sad, smutna, melancholic, happy, wesoła, joyful, \
+    #     fast, szybka, dynamic, energetic, slow, wolna, calm, spokojna, \
+    #     relaxing, relaksująca, loud, głośna, quiet, cicha, \
+    #     heavy, ciężka, soft, delikatna, danceable, taneczna, rhythmic",
+    #     "route": "AUDIO"
+    # }
+    "audio_emotion": {
+        "desc": "emotion, feelings, uczucia, \
+        happy, wesoła, wesoły, joyful, radosna, positive, pozytywna, \
+        sad, smutna, smutny, depressive, depresyjna, crying, płaczliwa, \
+        angry, agresywna, zła, fear, straszna, emotional, uczuciowa, \
+        euphoric, euforyczna",
         "route": "AUDIO"
+    },
+
+    # 2. NASTRÓJ / ATMOSFERA (Jaki jest klimat otoczenia/tła?)
+    "audio_mood": {
+        "desc": "mood, vibe, atmosphere, klimat, \
+        chill, chillout, relaksująca, relaxing, calm, spokojna, peaceful, \
+        dark, mroczna, gloomy, ponura, \
+        romantic, romantyczna, love, miłosna, sensual, zmysłowa, \
+        energetic, energetyczna, dance, taniec, party, imprezowa, epic, epicka, \
+        dreamy, marzycielska, mysterious, tajemnicza",
+        "route": "AUDIO"
+    },
+
+    # 3. CECHY TECHNICZNE / FIZYCZNE (Tempo, głośność, rytmika)
+    "audio_technical": {
+        "desc": "tempo, speed, volume, rhythm, \
+        fast, szybka, szybkie tempo, high bpm, \
+        slow, wolna, wolne tempo, downtempo, \
+        dynamic, dynamiczna, rhythmic, rytmiczna, groove, \
+        loud, głośna, noisy, hałaśliwa, \
+        quiet, cicha, soft, delikatna, gentle, łagodna, \
+        heavy, ciężka, mocna, hard, \
+        acoustic, akustyczna, synthesized, syntetyczna",
+        "route": "AUDIO"
+    },
+
+    "usage_context": {
+        "desc": "activity, occasion, purpose, \
+        focus, study, nauka, reading, coding, work, praca, \
+        sleep, sen, relax, relaks, yoga, meditation, medytacja, \
+        workout, gym, siłownia, running, bieganie, sport, training, \
+        car, driving, auto, podróż, commute, spacer, \
+        party, impreza, club, klub, dancing, taniec, \
+        cleaning, sprzątanie, cooking, gotowanie, background, tło, \
+        gaming, gry, playing, granie, stream, \
+        date, randka, romance, miłość, sex, seks",
+        "route": "ACTIVITY"
     }
 }
+#dodane
+LANGUAGE_CONFIG = {
+    "polish":   ["polski", "polska", "poland", "pl", "rodzimy", "krajowy", "polskie"],
+    "british": ["brytyjski", "brytania", "anglia", "londyn", "szkocki", "walijski","british", "uk", "england", "brit", "scotland", "wales", "london"],
+    "american": ["amerykański", "ameryka", "usa", "stany", "zjednoczone","american", "america", "us", "states"],
+    "english": ["angielski", "english", "anglojęzyczny"],
+    "german":   ["niemiecki", "niemcy", "german", "deutsch", "germany"],
+    "french":   ["francuski", "francja", "french", "france"],
+    "spanish":  ["hiszpański", "hiszpania", "spanish", "latino", "latynoski", "spain"],
+    "italian":  ["włoski", "włochy", "italia", "italian", "italy"],
+    "russian":  ["rosyjski", "rosja", "ruski", "moskiewski", "russian", "russia"],
+    "korean":   ["koreański", "korea", "korean"],
+    "japanese": ["japoński", "japonia", "japan", "anime", "japanese"],
+    "swedish":  ["szwedzki", "szwecja", "swedish", "sweden"],
+    "foreign": ["zagraniczny", "obcy", "międzynarodowy", "światowy", "foreign", "international", "overseas","global"],
+}
 
+GENRE_PHRASES_EXACT = {
+    "rap": ["hip hop", "hip-hop", "hiphop", "new school", "old school"],
+    "electronic": ["drum and bass", "dnb", "drum & bass", "psy trance"],
+    "rock": ["post rock", "post-rock", "alt rock", "punk rock"],
+    "pop": ["k-pop", "kpop", "synth pop"],
+    "rnb": ["r&b", "rnb"]
+}
 
+GENRE_LEMMA_CONFIG = {
+    "rap": ["rap", "rapowy", "rapsy", "trap", "drill"],
+    "rock": ["rock", "rockowy", "metal", "metalowy", "grunge", "punk", "punkowy", "alt"],
+    "pop": ["pop", "popowy", "disco", "mainstream", "radiowy", "przebój", "hit"],
+    "electronic": ["elektroniczny", "elektro", "techno", "house", "trance", "dubstep", "edm", "klubowy"],
+    "jazz": ["jazz", "jazzowy", "dżez", "blues", "bluesowy", "funk", "funkowy", "soul", "soulowy"],
+    "classical": ["klasyczny", "orkiestrowy", "symfoniczny", "pianino", "smyczkowy"],
+    "reggae": ["reggae", "rasta", "ska", "dub"],
+    "folk": ["folk", "folkowy", "etno", "ludowy", "country"],
+    "indie": ["indie", "alternatywny"]
+}
+
+LEMMA_TO_GENRE_MAP = {}
+LEMMA_TO_TAG_MAP = {}
 
 
 
@@ -393,6 +499,4 @@ ACTIVITY_GROUPS = {
         ]
     }
 }
-
-
 
