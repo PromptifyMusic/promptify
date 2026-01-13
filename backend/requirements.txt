@@ -9,8 +9,9 @@ sqlalchemy-utils
 pandas # Do wczytywania pliku Parquet
 pyarrow # Do odczytu plików Parquet
 spacy
-gliner
-sentence-transformers
+gliner==0.1.7
+sentence-transformers>=2.2.2
 scikit-learn
 langdetect
 --extra-index-url https://download.pytorch.org/whl/cpu
+transformers==4.38.2
