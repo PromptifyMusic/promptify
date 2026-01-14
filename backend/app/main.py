@@ -25,8 +25,7 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. START: Inicjalizacja tabel i wektorów
-    print("[MAIN] 🚀 Uruchamianie procedur startowych...")
+    print("[MAIN]Uruchamianie procedur startowych...")
 
     # Tworzenie tabel w bazie (jeśli nie istnieją)
     models.Base.metadata.create_all(bind=db_engine)
@@ -37,14 +36,14 @@ async def lifespan(app: FastAPI):
         # Dzięki Twojemu retry loop, to poczeka na zakończenie skryptu
         engine.initialize_global_tags(db)
     except Exception as e:
-        print(f"[MAIN] ❌ Błąd krytyczny przy ładowaniu tagów: {e}")
+        print(f"[MAIN]Błąd krytyczny przy ładowaniu tagów: {e}")
     finally:
         db.close()
 
     yield  # Tu aplikacja działa
 
     # 2. STOP
-    print("[MAIN] 🛑 Zamykanie aplikacji...")
+    print("[MAIN]Zamykanie aplikacji...")
 
 
 # --- INICJALIZACJA ---
@@ -169,21 +168,19 @@ def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Dep
 
     # 8. FALLBACK (OSTATECZNY RATUNEK - Jeśli AI nic nie znalazło lub wszystko było zablokowane)
     if replacement_song is None:
-        print("[REPLACE] ⚠️ Brak wyników AI lub wszystkie wykluczone. Pobieram losowy ratunek z bazy.")
+        print("[REPLACE]Brak wyników AI lub wszystkie wykluczone. Pobieram losowy ratunek z bazy.")
         # Pobieramy losowe piosenki bez filtrów (żeby na pewno coś zwrócić)
         fallback_df = engine.fetch_candidates_from_db({}, db, limit=50)
 
         if not fallback_df.empty:
-            # Mieszamy, żeby nie brać zawsze pierwszego z brzegu
             fallback_df = fallback_df.sample(frac=1).reset_index(drop=True)
             for index, row in fallback_df.iterrows():
                 if row['spotify_id'] not in exclude_ids:
                     replacement_song = row
-                    replacement_song['score'] = 0.1  # Niski score, bo to los
+                    replacement_song['score'] = 0.1
                     print(f"[REPLACE] Wybrano losowy ratunek: {row['artist']} - {row['name']}")
                     break
 
-    # 9. FINALIZACJA I ZWROT
     if replacement_song is None:
         raise HTTPException(status_code=404,
                             detail="Nie udało się znaleźć żadnego unikalnego utworu (baza zbyt mała?).")
@@ -193,10 +190,8 @@ def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Dep
         "spotify_preview_url", "album_images", "duration_ms"
     ]
 
-    # Filtrujemy tylko dostępne kolumny
     available_cols = [c for c in result_cols if c in replacement_song.index]
 
-    # Zamieniamy NaN na None dla JSON-a
     return replacement_song[available_cols].replace({np.nan: None}).to_dict()
 
 
@@ -206,9 +201,6 @@ def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Dep
 @app.post("/search", response_model=List[schemas.SongResult])
 def search_songs(
         request: schemas.SearchRequest,
-        # text: str = Query(..., description="Prompt użytkownika"),
-        # ilosc: int = Query(15, alias="top_n", ge=1, le=50),
-        # Wstrzykujemy sesję bazy danych (KLUCZOWE dla nowej wersji)
         db: Session = Depends(get_db)):
     '''
         desc: analizuje tekst przy pomocy SI a następnie szuka pasujących piosenek na podstawie tagów i cech audio
@@ -219,11 +211,8 @@ def search_songs(
     text = request.text
     top_n = request.top_n
 
-
     print(f"\n[API] NOWY PROMPT: '{text}' (Top {top_n})")
 
-
-#zmiana
     try:
         lang_code = detect(text)
     except:
@@ -238,7 +227,6 @@ def search_songs(
         current_matcher = engine.matcher_pl
         lang_txt = 'PL'
 
-#zmiana
     extracted_phrases = engine.extract_relevant_phrases(text, current_nlp, current_matcher)
 
 
@@ -254,11 +242,6 @@ def search_songs(
     tags_queries = queries['TAGS']
     audio_queries = queries['AUDIO']
 
-
-
-
-
-
     print(f"Tagi={tags_queries} | Audio={audio_queries}")
 
     found_tags_map = engine.map_phrases_to_tags(tags_queries)
@@ -267,7 +250,6 @@ def search_songs(
     criteria_audio = engine.phrases_to_features(audio_queries, search_indices=engine.SEARCH_INDICES, lang_code=lang_code)
 
     candidates_df = engine.fetch_candidates_from_db(query_tag_weights, db, criteria_audio)
-#---------------------
     current_count = len(candidates_df)
 
     if current_count < top_n:
@@ -275,7 +257,6 @@ def search_songs(
         print(
             f"[API]Znaleziono tylko {current_count} idealnych pasowań. Dobieram {needed}")
 
-        # Pobieramy zapasowe piosenki)
         backup_df = engine.fetch_candidates_from_db({}, db, criteria_audio, limit=needed * 3)
 
         candidates_df = pd.concat([candidates_df, backup_df]).drop_duplicates(subset=['spotify_id'])
@@ -286,7 +267,6 @@ def search_songs(
             random_df = engine.fetch_candidates_from_db({}, db, limit=needed_panic * 2)
             candidates_df = pd.concat([candidates_df, random_df]).drop_duplicates(subset=['spotify_id'])
 
-#-----------------
     if candidates_df.empty:
         print("[API] Brak wyników po tagach. Pobieranie puli zapasowej.")
         candidates_df = engine.fetch_candidates_from_db({}, db, criteria_audio,  limit=200)
@@ -326,13 +306,7 @@ def search_songs(
     return final_playlist[available_cols].replace({np.nan: None}).to_dict(orient="records")
 
 
-#Mikolaj
-
-# KONFIGURACJA SPOTIFY
-# Zakres uprawnień songs_query = songs_query.filter(cast(column, Float).between(safe_min, safe_max))(Scope). Musimy poprosić o prawo do edycji playlist.
 SPOTIFY_SCOPE = "playlist-modify-public playlist-modify-private"
-
-
 
 
 @app.get("/")
@@ -358,8 +332,6 @@ def get_spotify_oauth():
     client_id = os.getenv("SPOTIPY_CLIENT_ID")
     client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
     redirect_uri = os.getenv("SPOTIPY_REDIRECT_URI")
-
-    # Walidacja konfiguracji
     if not client_id or not client_secret or not redirect_uri:
         raise ValueError(
             "Missing Spotify configuration. Please check your .env file:\n"
@@ -409,10 +381,7 @@ def login_spotify():
         output: Przekierowanie na oficjalną stronę Spotify
     '''
     sp_oauth = get_spotify_oauth()
-    # Pobierz URL autoryzacji
     auth_url = sp_oauth.get_authorize_url()
-    # Dodaj parametr show_dialog=true aby wymusić wyświetlenie ekranu logowania
-    # nawet jeśli użytkownik jest już zalogowany w przeglądarce
     if '?' in auth_url:
         auth_url += '&show_dialog=true'
     else:
@@ -562,7 +531,7 @@ def create_playlist_hardcoded():
         output: Status playlisty
     '''
 
-    #Autoryzacja
+
     token_info = user_tokens.get('current_user')
     if not token_info:
         raise HTTPException(status_code=401, detail="Najpierw zaloguj się na /login")
@@ -570,14 +539,12 @@ def create_playlist_hardcoded():
     sp = spotipy.Spotify(auth=token_info['access_token'])
     user_id = sp.current_user()['id']
 
-    #Pobranie danych ze zmiennych globalnych
     current_ids = MOJA_LISTA_DO_PLAYLISTY
     pl_name = PLAYLIST_NAME
     pl_public = PLAYLIST_PUBLIC
     pl_desc = PLAYLIST_DESC
     cover_path = PLAYLIST_COVER_PATH
 
-    #Pętla przetwarzająca ID
     spotify_uris = []
     for sid in current_ids:
         if "spotify:track:" not in sid:
@@ -586,7 +553,6 @@ def create_playlist_hardcoded():
             spotify_uris.append(sid)
 
 
-    #Tworzenie playlisty
     playlist = sp.user_playlist_create(
         user=user_id,
         name=pl_name,
@@ -594,7 +560,6 @@ def create_playlist_hardcoded():
         description=pl_desc
     )
 
-    #Dodawanie zdjęcia (jeśli jest w configu)
     cover_msg = "Brak zdjęcia"
     if cover_path:
         img_base64 = encode_image_to_base64(cover_path)
@@ -605,7 +570,6 @@ def create_playlist_hardcoded():
             except Exception as e:
                 cover_msg = f"Błąd zdjęcia: {e}"
 
-    #Wrzucanie utworów
     if spotify_uris:
         sp.playlist_add_items(playlist_id=playlist['id'], items=spotify_uris)
 
@@ -638,13 +602,10 @@ def export_playlist(request: schemas.PlaylistCreateRequest):
         - tracks_count (int): Liczba dodanych utworów
         - public (bool): Czy playlista jest publiczna
     """
-
-    # Autoryzacja
     token_info = user_tokens.get('current_user')
     if not token_info:
         raise HTTPException(status_code=401, detail="Najpierw zaloguj się na /login")
 
-    # Sprawdź czy token nie wygasł
     sp_oauth = get_spotify_oauth()
     if sp_oauth.is_token_expired(token_info):
         try:
@@ -657,7 +618,6 @@ def export_playlist(request: schemas.PlaylistCreateRequest):
         sp = spotipy.Spotify(auth=token_info['access_token'])
         user_id = sp.current_user()['id']
 
-        # Konwersja ID na Spotify URI
         spotify_uris = []
         for sid in request.song_ids:
             if "spotify:track:" not in sid:
@@ -665,7 +625,6 @@ def export_playlist(request: schemas.PlaylistCreateRequest):
             else:
                 spotify_uris.append(sid)
 
-        # Tworzenie playlisty
         playlist = sp.user_playlist_create(
             user=user_id,
             name=request.name,
@@ -673,9 +632,7 @@ def export_playlist(request: schemas.PlaylistCreateRequest):
             description=request.description
         )
 
-        # Dodawanie utworów do playlisty
         if spotify_uris:
-            # Spotify API akceptuje max 100 utworów na raz
             for i in range(0, len(spotify_uris), 100):
                 batch = spotify_uris[i:i + 100]
                 sp.playlist_add_items(playlist_id=playlist['id'], items=batch)

@@ -1,5 +1,4 @@
 import difflib
-import os
 import random
 import torch
 import pandas as pd
@@ -10,12 +9,10 @@ import spacy
 from spacy.matcher import Matcher
 from spacy.util import filter_spans
 from sklearn.metrics.pairwise import cosine_similarity
-from langdetect import detect, DetectorFactory
-from sqlalchemy import text
-from sqlalchemy.orm import Session, joinedload, load_only
+from langdetect import DetectorFactory
+from sqlalchemy.orm import Session, joinedload
 from . import models
-from sqlalchemy import text, cast, Float,  select, func
-from pgvector.sqlalchemy import Vector
+from sqlalchemy import  cast, Float, func
 from . import engine_config
 import time
 
@@ -26,37 +23,29 @@ TAG_VECS = None
 
 
 def initialize_global_tags(db: Session, retries=6, delay=5):
-    """
-    Pobiera wektory tagów bezpośrednio z kolumny 'tag_embedding' w PostgreSQL (pgvector)
-    i ładuje je do pamięci RAM (NumPy) dla szybkiego wyszukiwania.
-    """
     global TAGS_LIST, TAG_VECS
 
     print("[ENGINE]Pobieranie wektorów tagów z Bazy Danych (pgvector)...")
 
     tags_data = []
 
-    # Pętla ponawiania (Retry Loop)
     for attempt in range(retries):
         tags_data = db.query(models.Tag.name, models.Tag.tag_embedding) \
             .filter(models.Tag.tag_embedding.isnot(None)) \
             .all()
 
         if tags_data:
-            print(f"[ENGINE] Pobrano dane za {attempt + 1}. próbą.")
+            print(f"[ENGINE]Pobrano dane za {attempt + 1}. próbą.")
             break
         else:
-            print(f"[ENGINE] ⚠️ Próba {attempt + 1}/{retries}: Baza wektorów jest pusta/niegotowa. Czekam {delay}s...")
+            print(f"[ENGINE]Próba {attempt + 1}/{retries}: Baza wektorów jest pusta/niegotowa. Czekam {delay}s...")
             time.sleep(delay)
 
     if not tags_data:
-        print("[ENGINE] BŁĄD KRYTYCZNY: Nie udało się załadować wektorów po wielu próbach.")
-        print("[ENGINE] Upewnij się, że skrypt 'update_tag_vectors.py' został wykonany.")
+        print("[ENGINE]Nie udało się załadować wektorów po wielu próbach.")
         TAGS_LIST = []
         TAG_VECS = None
         return
-
-    #2. Konwersja danych z Bazy do NumPy
 
     temp_names = []
     temp_vecs = []
@@ -70,36 +59,28 @@ def initialize_global_tags(db: Session, retries=6, delay=5):
     TAGS_LIST = temp_names
     TAG_VECS = np.array(temp_vecs)
 
-    print(f"[ENGINE]SUKCES: Załadowano {len(TAG_VECS)} wektorów z bazy do RAM-u.")
+    print(f"[ENGINE]Załadowano {len(TAG_VECS)} wektorów z bazy do RAM-u.")
 
 
+if torch.cuda.is_available():
+    device = "cuda"
+    print(f"[ENGINE]Wykryto GPU NVIDIA: {torch.cuda.get_device_name(0)}")
+elif torch.backends.mps.is_available():
+    device = "mps"
+    print("[ENGINE]Wykryto Apple Metal (MPS)")
+else:
+    device = "cpu"
+    print("[ENGINE]Nie wykryto GPU. Używam CPU.")
 
-# device = (
-#     "cuda" if torch.cuda.is_available()
-#     else "mps" if torch.backends.mps.is_available()
-#     else "cpu"
-# )
-#
-# print(f"[ENGINE] Wykryte urządzenie obliczeniowe: {device}")
-#
+print(f"[ENGINE]Wykryte urządzenie obliczeniowe: {device}")
 
 
-print("[ENGINE] Ładowanie modeli AI")
+print("[ENGINE]Ładowanie modeli AI")
 model_e5 = SentenceTransformer('intfloat/multilingual-e5-base')
 model_gliner = GLiNER.from_pretrained("urchade/gliner_multi-v2.1")
 
-
 nlp_pl = spacy.load("pl_core_news_lg")
 nlp_en = spacy.load("en_core_web_md")
-
-
-
-
-
-
-
-
-
 
 def create_matcher_for_nlp(nlp_instance):
     matcher = Matcher(nlp_instance.vocab)
@@ -143,12 +124,7 @@ def create_matcher_for_nlp(nlp_instance):
 matcher_pl = create_matcher_for_nlp(nlp_pl)
 matcher_en = create_matcher_for_nlp(nlp_en)
 
-
-
-
-
 def is_span_negated(doc, start_index, window=2):
-
     lookback = max(0, start_index - window)
     preceding_tokens = doc[lookback:start_index]
 
@@ -158,29 +134,12 @@ def is_span_negated(doc, start_index, window=2):
     return False
 
 
-
-
-#zmieniam
 def extract_relevant_phrases(prompt, current_nlp, current_matcher):
     prompt = prompt.lower()
     prompt_clean = prompt.strip()
 
     if not prompt_clean:
         return []
-    #
-    # try:
-    #     lang_code = detect(prompt)
-    # except:
-    #     lang_code = 'pl'
-    #
-    # if lang_code == 'en':
-    #     current_nlp = nlp_en
-    #     current_matcher = matcher_en
-    #     lang_msg = "EN"
-    # else:
-    #     current_nlp = nlp_pl
-    #     current_matcher = matcher_pl
-    #     lang_msg = "PL"
 
     doc = current_nlp(prompt)
 
@@ -196,13 +155,9 @@ def extract_relevant_phrases(prompt, current_nlp, current_matcher):
         if is_span_negated(doc, span.start):
             continue
 
-
-
         final_phrases.append(span.text.lower())
 
     unique_phrases = sorted(list(set([p.strip() for p in final_phrases if len(p.strip()) > 2])))
-
-    #print(f"[{lang_msg}] Prompt: '{prompt}' \n-> {unique_phrases}")
 
     return unique_phrases
 
@@ -212,9 +167,7 @@ GLINER_LABELS = [f"{k} ({v['desc']})" for k, v in engine_config.LABELS_CONFIG.it
 ROUTING_MAP = {k: v['route'] for k, v in engine_config.LABELS_CONFIG.items()}
 
 
-
 def get_label_config_lists(config):
-
     gliner_labels = []
     label_mapping = {}
     for key, value in config.items():
@@ -226,17 +179,13 @@ def get_label_config_lists(config):
 
 GLINER_LABELS_LIST, GLINER_LABEL_MAP = get_label_config_lists(engine_config.LABELS_CONFIG)
 
-#nowe
-
 for tag, keywords in engine_config.LANGUAGE_CONFIG.items():
     for word in keywords:
         engine_config.LEMMA_TO_TAG_MAP[word] = tag
 
-
 for genre, keywords in engine_config.GENRE_LEMMA_CONFIG.items():
     for word in keywords:
         engine_config.LEMMA_TO_GENRE_MAP[word] = genre
-
 
 
 def _match_geographical_location(doc_temp, fuzzy_cutoff):
@@ -256,7 +205,7 @@ def _match_geographical_location(doc_temp, fuzzy_cutoff):
             matches = difflib.get_close_matches(lemma, engine_config.LEMMA_TO_TAG_MAP.keys(), n=1, cutoff=fuzzy_cutoff)
             if matches:
                 found_key = matches[0]
-                print(f"Naprawiono literówkę: '{lemma}' -> '{found_key}'")
+                print(f"[ENGINE]Naprawiono literówkę: '{lemma}' -> '{found_key}'")
 
         if found_key:
             return {
@@ -294,25 +243,22 @@ def _match_music_genre_lemma(doc_temp, fuzzy_cutoff):
     for token in doc_temp:
         lemma = token.lemma_.lower()
 
-        # dokładne dopasowanie
         if lemma in engine_config.LEMMA_TO_GENRE_MAP:
             return {
                 "category": "music_genre",
                 "route": "TAGS"
             }
 
-        # fuzzy match
         elif len(lemma) > 4:
             matches = difflib.get_close_matches(lemma, engine_config.LEMMA_TO_GENRE_MAP.keys(), n=1, cutoff=fuzzy_cutoff)
 
             if matches:
                 found_key = matches[0]
-                print(f"Naprawiono literówkę gatunku: '{lemma}' -> '{found_key}'")
+                print(f"[ENGINE]Naprawiono literówkę: '{lemma}' -> '{found_key}'")
                 return {
                     "category": "music_genre",
                     "route": "TAGS"
                 }
-
     return None
 
 
@@ -333,13 +279,11 @@ def _match_time_period(phrase_lower, doc_temp):
             "route": "TAGS"
         }
 
-    # 2ERY / SŁOWA CZASOWE
     era_lemmas = [
         "stary", "nowy", "old", "oldies", "klasyk", "classic",
         "retro", "vintage", "new", "newschool", "oldschool", "współczesny"
     ]
 
-    # Sprawdzamy tokeny ze spaCy
     for token in doc_temp:
         lemma = token.lemma_.lower()
         text = token.text.lower()
@@ -363,7 +307,6 @@ def _match_with_gliner(phrase_lower, gliner_predictions):
     for entity in gliner_predictions:
         entity_lower = entity['text'].lower().strip()
 
-        # Sprawdzenie pokrycia (overlap)
         if phrase_lower in entity_lower or entity_lower in phrase_lower:
             full_label = entity['label']
             short_key = GLINER_LABEL_MAP.get(full_label)
@@ -386,7 +329,6 @@ def _classify_single_phrase(phrase, doc_temp, gliner_predictions, fuzzy_cutoff):
     """
     phrase_lower = phrase.lower().strip()
 
-    # POPULARNE GATUNKI - dokładne dopasowanie
     match = _match_music_genre_exact(phrase_lower)
     if match:
         return {
@@ -395,7 +337,6 @@ def _classify_single_phrase(phrase, doc_temp, gliner_predictions, fuzzy_cutoff):
             "route": match["route"]
         }
 
-    # POPULARNE GATUNKI - lematyzacja
     match = _match_music_genre_lemma(doc_temp, fuzzy_cutoff)
     if match:
         return {
@@ -404,7 +345,6 @@ def _classify_single_phrase(phrase, doc_temp, gliner_predictions, fuzzy_cutoff):
             "route": match["route"]
         }
 
-    # CZAS/DEKADA
     match = _match_time_period(phrase_lower, doc_temp)
     if match:
         return {
@@ -413,7 +353,6 @@ def _classify_single_phrase(phrase, doc_temp, gliner_predictions, fuzzy_cutoff):
             "route": match["route"]
         }
 
-    # JĘZYK/KRAJ
     match = _match_geographical_location(doc_temp, fuzzy_cutoff)
     if match:
         return {
@@ -422,7 +361,6 @@ def _classify_single_phrase(phrase, doc_temp, gliner_predictions, fuzzy_cutoff):
             "route": match["route"]
         }
 
-    # GLINER
     match = _match_with_gliner(phrase_lower, gliner_predictions)
     if match:
         return {
@@ -431,7 +369,6 @@ def _classify_single_phrase(phrase, doc_temp, gliner_predictions, fuzzy_cutoff):
             "route": match["route"]
         }
 
-    # FALLBACK
     return {
         "phrase": phrase,
         "category": "none",
@@ -441,32 +378,11 @@ def _classify_single_phrase(phrase, doc_temp, gliner_predictions, fuzzy_cutoff):
 
 def classify_phrases_with_gliner(prompt, spacy_phrases, model, nlp_model, threshold=0.3, fuzzy_cutoff=0.9):
     """
-    Klasyfikuje frazy wykryte przez spaCy, dopasowując je do encji wykrytych przez model GLiNER
-    w kontekście całego promptu.
 
-    Funkcja łączy precyzyjne wycinanie fraz (spaCy) z rozumieniem kontekstu (GLiNER).
-    Opiera się na globalnych zmiennych konfiguracyjnych: GLINER_LABELS_LIST, GLINER_LABEL_MAP oraz LABELS_CONFIG.
-
-    Args:
-        prompt (str): Pełna treść zapytania użytkownika (niezbędna dla kontekstu GLiNERa).
-        spacy_phrases (List[str]): Lista fraz (noun chunks/entities) wyekstrahowanych wcześniej przez spaCy.
-        model (Any): Załadowany model GLiNER (np. obiekt klasy GLiNER).
-        nlp_model: Załadowany model spaCy do lematyzacji.
-        threshold (float, optional): Próg pewności dla predykcji GLiNERa. Domyślnie 0.3.
-        fuzzy_cutoff (float, optional): Próg dla fuzzy matching. Domyślnie 0.8.
-
-    Returns:
-        List[Dict[str, str]]: Lista słowników, gdzie każdy słownik reprezentuje sklasyfikowaną frazę:
-            {
-                "phrase": str (oryginalna fraza ze spaCy),
-                "category": str (klucz kategorii np. 'gatunek_muzyczny' lub 'cecha_audio'),
-                "route": str (typ routingu np. 'TAGS' lub 'AUDIO')
-            }
     """
     if not spacy_phrases or nlp_model is None:
         return []
 
-    # Uruchamiamy GLiNER na całym tekście
     gliner_predictions = model.predict_entities(prompt, GLINER_LABELS_LIST, threshold=threshold)
 
     results = []
@@ -498,7 +414,7 @@ def prepare_queries_for_e5_separated(classified_data, original_prompt):
 
 def prepare_search_indices(model, feature_descriptions, activity_groups):
 
-    print("[INIT] Generowanie indeksów wektorowych...")
+    print("[ENDGINE]Generowanie indeksów wektorowych...")
     indices = {
         'AUDIO': {},
         'ACTIVITY': {}
@@ -514,7 +430,7 @@ def prepare_search_indices(model, feature_descriptions, activity_groups):
 
         indices['ACTIVITY'][key] = model.encode([f"passage: {desc_text}"], normalize_embeddings=True)
 
-    print(f"[SUCCESS] Zainicjalizowano {len(indices['AUDIO'])} cech audio i {len(indices['ACTIVITY'])} grup aktywności.")
+    print(f"[ENDGINE]Zainicjalizowano {len(indices['AUDIO'])} cech audio i {len(indices['ACTIVITY'])} grup aktywności.")
     return indices
 
 SEARCH_INDICES = prepare_search_indices(model_e5, engine_config.FEATURE_DESCRIPTIONS, engine_config.ACTIVITY_GROUPS)
@@ -538,7 +454,7 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
     print(f"\nFRAZY: {phrases_list}")
 
     for phrase in phrases_list:
-        suffix = " muzyka" if lang_code == 'pl' else " music"
+        suffix = "muzyka" if lang_code == 'pl' else " music"
         context_vec = model_e5.encode([f"query: {suffix} {phrase}"], normalize_embeddings=True)
 
         doc = nlp_model(phrase.lower())
@@ -589,10 +505,10 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
                 winner_type = 'ACTIVITY'; final_score = best_act_score
 
         if winner_type == 'AUDIO':
-            print(f"[MATCH:AUDIO] '{phrase}' -> feature: {best_audio_key} (score: {final_score:.4f})")
+            print(f"[ENDGINE] '{phrase}' -> feature: {best_audio_key} (score: {final_score:.4f})")
             found_explicit_audio.append((best_audio_key, best_audio_val, final_score))
         else:
-            print(f"[MATCH:ACTIVITY] '{phrase}' -> category: {best_act_key} (score: {final_score:.4f})")
+            print(f"[ENDGINE] '{phrase}' -> category: {best_act_key} (score: {final_score:.4f})")
             found_activities.append((best_act_key, final_score))
 
     merged = {}
@@ -606,15 +522,15 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
     for feat, val, score in found_explicit_audio:
         if feat not in merged or score > merged[feat]['confidence']:
             if feat in merged:
-                print(f"nadpisywanie '{feat}': (Score: {score:.2f})")
+                print(f"[ENDGINE]nadpisywanie '{feat}': (Score: {score:.2f})")
             merged[feat] = {'value': val, 'confidence': float(score)}
 
-    print("\n[AUDIO MATCH] Zmapowane cechy auclassify_phrases_with_glinerdio:", flush=True)
+    print("\n[ENDGINE]Zmapowane cechy auclassify_phrases_with_glinerdio:", flush=True)
     if not merged:
-        print("   -> Brak (używam domyślnych/random)", flush=True)
+        print("-> Brak (używam random)", flush=True)
     else:
         for k, v in merged.items():
-            print(f"   -> {k}: {v['value']} (Pewność: {v['confidence']:.2f})", flush=True)
+            print(f"-> {k}: {v['value']} (Pewność: {v['confidence']:.2f})", flush=True)
 
 
     return sorted([(k, v) for k, v in merged.items()], key=lambda x: x[1]['confidence'], reverse=True)
@@ -626,79 +542,61 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
 def map_phrases_to_tags(
         phrases: list[str],
         model=model_e5,
-        threshold_strict: float = 0.82,  # Pewniak (E5 mówi: to jest to samo)
-        threshold_lenient: float = 0.75  # Ratunek (E5 niepewne, ale tekst podobny)
+        threshold_strict: float = 0.82,
+        threshold_lenient: float = 0.75
 ) -> dict[str, float]:
-    # Zabezpieczenie przed pustą bazą/frazami
     if not phrases or TAG_VECS is None or len(TAG_VECS) == 0:
         if TAG_VECS is None:
-            print("[ENGINE] OSTRZEŻENIE: Wektory tagów nie są załadowane!")
+            print("[ENGINE]Wektory tagów nie są załadowane")
         return {}
 
-    print(f"\n[ENGINE] Mapowanie Hybrydowe dla fraz: {phrases}")
+    print(f"\n[ENGINE]Mapowanie Hybrydowe dla fraz: {phrases}")
 
-    # 1. Obliczamy wektory dla fraz użytkownika
-    # Używamy modelu E5 załadowanego globalnie
     q_vecs = model.encode(
         [f"query: {p}" for p in phrases],
         convert_to_numpy=True,
         normalize_embeddings=True
     ).astype("float32")
 
-    # 2. Macierz podobieństwa (Wszystkie Tagi z Bazy vs Wszystkie Frazy)
     sims_matrix = cosine_similarity(TAG_VECS, q_vecs)
 
     found_tags = {}
 
     for i, phrase in enumerate(phrases):
-        # Pobieramy kolumnę wyników dla danej frazy
         phrase_scores = sims_matrix[:, i]
 
-        # Znajdujemy najlepszy tag
         best_idx = np.argmax(phrase_scores)
         best_score = float(phrase_scores[best_idx])
-        best_tag_name = TAGS_LIST[best_idx]  # Bierzemy nazwę z globalnej listy
+        best_tag_name = TAGS_LIST[best_idx]
 
-        # --- LOGIKA HYBRYDOWA ---
         is_match = False
         reason = ""
 
-        # A. Czy wynik jest bardzo wysoki? (Pewniak E5)
-        # Np. "heavy metal" -> "Metal" (Score 0.85)
         if best_score >= threshold_strict:
             is_match = True
             reason = "High Score"
 
-        # B. Czy wynik jest średni, ale TEKST SIĘ ZGADZA? (Koło ratunkowe)
-        # Np. "rockowa" -> "Rock" (Score 0.78 - normalnie by odpadło, ale tekst ratuje)
         elif best_score >= threshold_lenient:
             p_lower = phrase.lower()
             t_lower = best_tag_name.lower()
 
-            # Warunek 1: Zawieranie się (substring)
             if t_lower in p_lower or p_lower in t_lower:
                 is_match = True
                 reason = "Text Rescue"
 
-            # Warunek 2: Fuzzy Match (literówki, np. "metalica" -> "metal")
-            # ratio > 0.7 oznacza 70% zgodności liter
             elif difflib.SequenceMatcher(None, p_lower, t_lower).ratio() > 0.7:
                 is_match = True
                 reason = "Fuzzy Rescue"
 
-        # --- ZAPISYWANIE WYNIKU ---
         if is_match:
-            print(f"MATCH: '{phrase}' -> '{best_tag_name}' ({best_score:.3f}) [{reason}]")
-            # Jeśli tag już jest, bierzemy max score
+            print(f"[ENDGINE]MATCH: '{phrase}' -> '{best_tag_name}' ({best_score:.3f}) [{reason}]")
             found_tags[best_tag_name] = max(found_tags.get(best_tag_name, 0), best_score)
         else:
-            # Logujemy odrzucenia (dla debugowania)
-            if best_score > 0.6:  # Żeby nie śmiecić logami o zerowym dopasowaniu
-                print(f"SKIP:  '{phrase}' -> '{best_tag_name}' ({best_score:.3f}) [Za niski wynik]")
+
+            if best_score > 0.6:
+                print(f"[ENDGINE]SKIP:  '{phrase}' -> '{best_tag_name}' ({best_score:.3f}) [Za niski wynik]")
 
     return found_tags
-
-
 
 
 def search_tags_in_db(phrases, db=None):
@@ -706,14 +604,9 @@ def search_tags_in_db(phrases, db=None):
 
 
 def get_query_tag_weights(raw_tags)-> dict[str, float]:
-
     s = sum(raw_tags.values())
     if s <= 0: return raw_tags
     return {t: v / s for t, v in raw_tags.items()}
-
-#najalpej bez limitu
-
-
 
 
 def fetch_candidates_from_db(
@@ -730,12 +623,12 @@ def fetch_candidates_from_db(
 
     if tag_scores:
         tags_list = list(tag_scores.keys())
-        print(f"[DB FETCH] Pobieram po tagach: {tags_list}")
+        print(f"[ENDGINE]Pobieram po tagach: {tags_list}")
         songs_query = songs_query.join(models.Song.tags).filter(models.Tag.name.in_(tags_list))
 
 
     if audio_constraints:
-        print(f"[DB FETCH] Filtr cech audio.")
+        print(f"[ENDGINE]Filtr cech audio.")
 
         MARGIN = 0.15
 
@@ -753,79 +646,61 @@ def fetch_candidates_from_db(
             if hasattr(models.Song, feat_name):
                 column = getattr(models.Song, feat_name)
                 songs_query = songs_query.filter(cast(column, Float).between(safe_min, safe_max))
-                print(f" -> SQL Filter: {feat_name} BETWEEN {safe_min:.2f} AND {safe_max:.2f}")
+                print(f"-> SQL Filter: {feat_name} BETWEEN {safe_min:.2f} AND {safe_max:.2f}")
 
     songs = []
-    # Random sample
+
     if tag_scores:
-        print(f"[DB FETCH] Strategia: RANKING (Najlepsze dopasowania).")
-        # KROK 1: Pobieramy TYLKO ID piosenek, żeby uniknąć błędu "GroupingError"
-        # Używamy with_entities, żeby nadpisać SELECT na samo ID
+        print(f"[ENDGINE]Najlepsze dopasowania")
+
         id_query = songs_query.with_entities(models.Song.song_id)
 
         ranked_ids_tuples = (
             id_query
             .group_by(models.Song.song_id)
             .order_by(
-                func.count(models.Song.song_id).desc(),  # Najważniejsze: liczba trafień
-                func.random()  # Losowość przy remisie
+                func.count(models.Song.song_id).desc(),
+                func.random()
             )
             .limit(limit)
             .all()
         )
-        # Wyciągamy same ID z krotek
         ranked_ids = [r[0] for r in ranked_ids_tuples]
 
         if ranked_ids:
-            # KROK 2: Pobieramy pełne obiekty dla znalezionych ID
-            # Joinedload przyspieszy pobieranie tagów
             unordered_songs = db.query(models.Song) \
                 .filter(models.Song.song_id.in_(ranked_ids)) \
                 .options(joinedload(models.Song.tags)) \
                 .all()
 
-            # KROK 3: Przywracamy kolejność rankingu (bo IN_ niszczy kolejność)
             song_map = {s.song_id: s for s in unordered_songs}
             songs = [song_map[pid] for pid in ranked_ids if pid in song_map]
 
-            print(f"[DEBUG] Pobranno {len(songs)} utworów w 2 krokach.")
 
-            #LOG: TOP 5 UTWORÓW I ICH TAG
-            print(f"\n[DEBUG] --- TOP 5 KANDYDATÓW (Ranking) ---")
+            print(f"[ENDGINE]5 Najlepszych:")
             query_tags_set = set(tag_scores.keys())
 
             for i, s in enumerate(songs[:5]):
-                # Wyciągamy tagi utworu i sprawdzamy część wspólną z zapytaniem
                 song_tags = {t.name for t in s.tags}
                 matched = song_tags.intersection(query_tags_set)
-                # Reszta tagów (dla kontekstu)
                 other = list(song_tags - matched)[:3]
 
                 print(f" {i + 1}. {s.artist} - {s.name}")
-                print(f"    -> Pasujące tagi ({len(matched)}): {matched}")
-                # print(f"    -> Inne tagi: {other}...") # Opcjonalnie
+                print(f"-> Pasujące tagi ({len(matched)}): {matched}")
             print(f"----------------------------------------\n")
-            # ------------------------------------------
 
-
-
-            # Debug log (opcjonalnie)
             if songs:
                 top_s = songs[0]
                 matching = {t.name for t in top_s.tags}.intersection(tag_scores.keys())
-                print(f"[DEBUG] Top 1: {top_s.artist} - {top_s.name} (Tagi: {len(matching)})")
-
-
 
     else:
-        print(f"[DB FETCH] Strategia: SAMPLING (Losowa próbka).")
-
+        print(f"[ENDGINE]Losowa próbka.")
 
         songs_query = songs_query.distinct()
         total_estimate = songs_query.count()
 
         if total_estimate <= limit:
-            print(f"[DB FETCH] Mała pula ({total_estimate}), biorę wszystko.")
+            print(f"[ENDGINE]Mała pula ({total_estimate}).")
             songs = songs_query.all()
 
         else:
@@ -834,9 +709,9 @@ def fetch_candidates_from_db(
 
             TARGET_BUCKETS = max(
                 1, int(100 * (limit * 1.2) / max(total_estimate, 1))
-            ) # procent rekordów do pobrania
+            )
 
-            print(f"[DB FETCH] Pobieram hash-based sample: {TARGET_BUCKETS}% z {total_estimate} rekordów")
+            print(f"[ENDGINE]Pobieram hash-based sample: {TARGET_BUCKETS}% z {total_estimate} rekordów")
 
             songs = (
                 songs_query
@@ -850,14 +725,12 @@ def fetch_candidates_from_db(
                 .all()
             )
             if not songs:
-                print("[DB FETCH] Fallback: Random limit.")
+                print("[ENDGINE]Fallback: Random limit.")
                 songs = songs_query.order_by(func.random()).limit(limit).all()
 
     if not songs:
         return pd.DataFrame()
 
-
-    # Tworzenie dataframe
     data = []
     q_pow = engine_config.SCORING_CONFIG.get("query_pow", 1.0)
 
@@ -891,13 +764,10 @@ def fetch_candidates_from_db(
     if not df.empty and df['tag_score'].max() > 0:
         df['tag_score'] /= df['tag_score'].max()
 
-    # Inicjalizacja
     if not df.empty:
         df['score'] = df['tag_score']
 
     return df
-#=========================================================================
-
 
 
 def calculate_audio_match(candidates_df, audio_criteria):
@@ -912,7 +782,6 @@ def calculate_audio_match(candidates_df, audio_criteria):
     for feature_name, criteria in audio_criteria:
         val_data = criteria['value']
 
-
         if isinstance(val_data, (list, tuple)):
             target_min, target_max = val_data
         else:
@@ -922,7 +791,6 @@ def calculate_audio_match(candidates_df, audio_criteria):
             continue
 
         song_values = candidates_df[feature_name].to_numpy()
-
 
         dist_below = np.maximum(0, target_min - song_values)
 
@@ -958,8 +826,6 @@ def tier_by_score(candidates: pd.DataFrame, t_high: float, t_mid: float):
     return tier_a, tier_b, tier_c
 
 
-
-
 def calculate_dynamic_thresholds(candidates_df, high_threshold=0.75, mid_threshold=0.5):
 
     if candidates_df.empty:
@@ -972,7 +838,6 @@ def calculate_dynamic_thresholds(candidates_df, high_threshold=0.75, mid_thresho
     t_mid = max(mid_threshold, max_score - 0.2)
 
     return t_high, t_mid
-
 
 
 def build_working_set(
@@ -1032,14 +897,12 @@ def build_working_set(
     return working
 
 
-
 def bucket_by_popularity(working: pd.DataFrame, p_high: int, p_mid: int):
 
     pop_high = working[working["popularity"] >= p_high].copy()
     pop_mid = working[(working["popularity"] < p_high) & (working["popularity"] >= p_mid)].copy()
     pop_low = working[working["popularity"] < p_mid].copy()
     return pop_high, pop_mid, pop_low
-
 
 
 def weighted_sample(df: pd.DataFrame, k: int, alpha: float):
@@ -1060,7 +923,6 @@ def weighted_sample(df: pd.DataFrame, k: int, alpha: float):
 
     idx = np.random.choice(len(df), size=k, replace=False, p=w)
     return df.iloc[idx]
-
 
 
 def sample_final_songs(
@@ -1088,8 +950,6 @@ def sample_final_songs(
     forced_popular_min     = popularity_cfg.get("forced_popular_min", p_high)
 
 
-
-
     pop_high, pop_mid, pop_low = bucket_by_popularity(working, p_high=p_high, p_mid=p_mid)
 
     final_parts = []
@@ -1105,7 +965,7 @@ def sample_final_songs(
     pop_mid  = pop_mid[~pop_mid.index.isin(used_idx)]
     pop_low  = pop_low[~pop_low.index.isin(used_idx)]
 
-    print(f"\n[SAMPLE] Buckety przed losowaniem:", flush=True)
+    print(f"\n[ENDGINE]Buckety przed losowaniem:", flush=True)
     print(f"   -> High Pop (>={p_high}): {len(pop_high)} utworów", flush=True)
     print(f"   -> Mid Pop  (>={p_mid}):  {len(pop_mid)} utworów", flush=True)
     print(f"   -> Low Pop  (<{p_mid}):   {len(pop_low)} utworów", flush=True)

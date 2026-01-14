@@ -17,13 +17,11 @@ def update_vectors():
     session = SessionLocal()
 
     try:
-        #1. Rozszerzenie vector i dodaj kolumnę do tabeli tagów
         with engine.connect() as conn:
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             conn.execute(text("ALTER TABLE tags_unique ADD COLUMN IF NOT EXISTS tag_embedding vector(768)"))
             conn.commit()
 
-        #2. Wczytywanie Parquet z tagami
         print(f"Wczytywanie wektorów z: {PARQUET_PATH}")
         if not os.path.exists(PARQUET_PATH):
             print(f"error: Nie znaleziono pliku {PARQUET_PATH}")
@@ -47,7 +45,6 @@ def update_vectors():
                 vec = vec.tolist()
             vector_map[tag_name] = vec
 
-        #3. Aktualizacja w bazie
         tags_db = session.query(Tag).all()
         print(f"Znaleziono {len(tags_db)} tagów w bazie.")
 

@@ -13,5 +13,6 @@ gliner==0.1.7
 sentence-transformers>=2.2.2
 scikit-learn
 langdetect
---extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
 transformers==4.38.2
