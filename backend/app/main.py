@@ -86,96 +86,117 @@ def replace_song_endpoint(request: schemas.ReplaceSongRequest, db: Session = Dep
         input: Prompt usera, listę piosenek wyszukanych przez prompt oraz id piosenki jakiej już nie chcemy
         output: dane do nowej piosenki
     '''
-
     prompt = request.text
+
+    # Budujemy zbiór ID do wykluczenia (obecna playlista + ta odrzucona)
     exclude_ids = set(request.current_playlist_ids)
     if request.rejected_song_id:
         exclude_ids.add(request.rejected_song_id)
 
+    print(f"\n[REPLACE] Szukam zamiennika dla: '{prompt}' (Wykluczam {len(exclude_ids)} ID)")
 
+    # 1. WYKRYWANIE JĘZYKA (Kluczowe dla poprawnego NLP)
+    try:
+        lang_code = detect(prompt)
+    except:
+        lang_code = 'pl'
 
+    if lang_code == 'en':
+        current_nlp = engine.nlp_en
+        current_matcher = engine.matcher_en
+        lang_txt = 'EN'
+    else:
+        current_nlp = engine.nlp_pl
+        current_matcher = engine.matcher_pl
+        lang_txt = 'PL'
 
-
-
-
-
-
-    extracted_phrases = engine.extract_relevant_phrases(prompt)
+    # 2. EKSTRAKCJA I KLASYFIKACJA (Z nowymi argumentami)
+    extracted_phrases = engine.extract_relevant_phrases(prompt, current_nlp, current_matcher)
 
     classified_data = engine.classify_phrases_with_gliner(
         prompt,
         extracted_phrases,
-
-        model=engine.model_gliner
+        model=engine.model_gliner,
+        nlp_model=current_nlp,  # <--- WAŻNE: Przekazujemy model NLP
+        threshold=engine_config.EXTRACTION_CONFIG['gliner_threshold']
     )
 
+    # 3. PRZYGOTOWANIE ZAPYTAŃ
     queries = engine.prepare_queries_for_e5_separated(classified_data, prompt)
     tags_queries = queries['TAGS']
     audio_queries = queries['AUDIO']
 
-    ROUTING_THRESHOLD = 0.81
+    print(f"[REPLACE] [{lang_txt}] Tagi={tags_queries} | Audio={audio_queries}")
 
-    for phrase in list(audio_queries):
-        check = engine.map_phrases_to_tags([phrase], threshold=ROUTING_THRESHOLD)
-        if check:
-            found_tag_name = list(check.keys())[0]
-            audio_queries.remove(phrase)
-            tags_queries.append(phrase)
-
-    print(f"[REPLACE] Tagi={tags_queries} | Audio={audio_queries}")
-
-
+    # 4. MAPOWANIE NA CECHY BAZY DANYCH
     found_tags_map = engine.map_phrases_to_tags(tags_queries)
     query_tag_weights = engine.get_query_tag_weights(found_tags_map)
 
-
     criteria_audio = engine.phrases_to_features(
         audio_queries,
         search_indices=engine.SEARCH_INDICES,
-        lang_code="pl"
+        lang_code=lang_code  # <--- WAŻNE: Przekazujemy język
     )
 
+    # 5. POBIERANIE KANDYDATÓW (Pobieramy np. 100, żeby mieć z czego wybierać po filtracji ID)
+    candidates_df = engine.fetch_candidates_from_db(query_tag_weights, db, criteria_audio, limit=100)
 
-    candidates_df = engine.fetch_candidates_from_db(query_tag_weights, db,criteria_audio, limit=200)
+    # 6. SCORING (Jeśli coś znaleziono)
+    if not candidates_df.empty:
+        audio_scores = engine.calculate_audio_match(candidates_df, criteria_audio)
+        candidates_df['audio_score'] = audio_scores
 
-    if candidates_df.empty:
-        print("[REPLACE] Brak kandydatów po tagach. Fallback popularne.")
-        candidates_df = engine.fetch_candidates_from_db({}, db, criteria_audio, limit=200)
+        has_tags = bool(found_tags_map)
+        # Scalamy wyniki
+        merged_df = engine.merge_tag_and_audio_scores(candidates_df, audio_weight=0.6, use_tags=has_tags)
 
-    criteria_audio = engine.phrases_to_features(
-        audio_queries,
-        search_indices=engine.SEARCH_INDICES,
-        lang_code="pl"
-    )
-    audio_scores = engine.calculate_audio_match(candidates_df, criteria_audio)
-    candidates_df['audio_score'] = audio_scores
+        # Sortujemy od najlepszego dopasowania
+        sorted_candidates = merged_df.sort_values("score", ascending=False)
+    else:
+        sorted_candidates = pd.DataFrame()
 
-    has_tags = bool(found_tags_map)
-    merged_df = engine.merge_tag_and_audio_scores(candidates_df, audio_weight=0.6, use_tags=has_tags)
-
-    sorted_candidates = merged_df.sort_values("score", ascending=False)
-
+    # 7. WYBÓR PIERWSZEGO UNIKALNEGO (Pętla po wynikach AI)
     replacement_song = None
 
-    for index, row in sorted_candidates.iterrows():
-        s_id = row['spotify_id']
+    if not sorted_candidates.empty:
+        for index, row in sorted_candidates.iterrows():
+            s_id = row['spotify_id']
+            if s_id not in exclude_ids:
+                replacement_song = row
+                print(
+                    f"[REPLACE] Znaleziono idealne zastępstwo: {row['artist']} - {row['name']} (Score: {row['score']:.2f})")
+                break
 
-        if s_id not in exclude_ids:
-            replacement_song = row
-            break
-        else:
-            pass
-
+    # 8. FALLBACK (OSTATECZNY RATUNEK - Jeśli AI nic nie znalazło lub wszystko było zablokowane)
     if replacement_song is None:
-        raise HTTPException(status_code=404, detail="Nie znaleziono unikalnego utworu do wymiany.")
+        print("[REPLACE] ⚠️ Brak wyników AI lub wszystkie wykluczone. Pobieram losowy ratunek z bazy.")
+        # Pobieramy losowe piosenki bez filtrów (żeby na pewno coś zwrócić)
+        fallback_df = engine.fetch_candidates_from_db({}, db, limit=50)
+
+        if not fallback_df.empty:
+            # Mieszamy, żeby nie brać zawsze pierwszego z brzegu
+            fallback_df = fallback_df.sample(frac=1).reset_index(drop=True)
+            for index, row in fallback_df.iterrows():
+                if row['spotify_id'] not in exclude_ids:
+                    replacement_song = row
+                    replacement_song['score'] = 0.1  # Niski score, bo to los
+                    print(f"[REPLACE] Wybrano losowy ratunek: {row['artist']} - {row['name']}")
+                    break
+
+    # 9. FINALIZACJA I ZWROT
+    if replacement_song is None:
+        raise HTTPException(status_code=404,
+                            detail="Nie udało się znaleźć żadnego unikalnego utworu (baza zbyt mała?).")
 
     result_cols = [
         "spotify_id", "name", "artist", "popularity", "score",
         "spotify_preview_url", "album_images", "duration_ms"
     ]
 
+    # Filtrujemy tylko dostępne kolumny
     available_cols = [c for c in result_cols if c in replacement_song.index]
 
+    # Zamieniamy NaN na None dla JSON-a
     return replacement_song[available_cols].replace({np.nan: None}).to_dict()
 
 
@@ -225,6 +246,7 @@ def search_songs(
         text,
         extracted_phrases,
         model=engine.model_gliner,
+        nlp_model=current_nlp,
         threshold=engine_config.EXTRACTION_CONFIG['gliner_threshold']
     )
 

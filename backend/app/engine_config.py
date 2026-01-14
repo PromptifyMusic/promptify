@@ -1,8 +1,10 @@
 
 EXTRACTION_CONFIG = {
-    "gliner_threshold": 0.3,
-    "tag_similarity_threshold": 0.65,
-    "audio_confidence_threshold": 0.78,
+    "gliner_threshold": 0.15,            # Min. pewność klasyfikacji encji GLiNER
+    "tag_similarity_threshold": 0.82,   # Min. cosine similarity dla mapowania na tagi (E5)
+    "tag_similarity_threshold_lenient": 0.75, # Min. cosine similarity dla mapowania na tagi (E5) w przypadku, gdy fraza zawiera tag
+    "audio_confidence_threshold": 0.78, # Min. pewność mapowania na cechy audio
+    "fuzzy_cutoff": 0.9 # fuzzy match próg
 }
 
 SCORING_CONFIG = {
@@ -30,7 +32,7 @@ WORKSET_CONFIG = {
     "target_pool_size": 100,
     # This does not seem to work as intended. It seems to me that its value sets max size rather than min size.
     # Value set to 50 as temporary workaround. (50 is max size of the playlist I set on frontend)
-    "min_required_size": 50,
+    "min_required_size": 15,
 
     "popularity_rescue_ratio": 0.2,
 }
@@ -113,9 +115,8 @@ LABELS_CONFIG = {
     # --- KATEGORIE KIEROWANE DO BAZY TAGÓW (route: TAGS) ---
 
     "music_genre": {
-        # Usunięto przymiotniki, skupiono się na rzeczownikach oznaczających styl
-        "desc": "music genre, category, style, \
-        rock, pop, jazz, hip hop, rap, metal, indie, alternative, \
+        "desc": "music genre, gatunek muzyczny, category, style, \
+        rock, pop, jazz, hip hop, rap, rapowa, metal, indie, alternative, \
         electronic, classical, reggae, techno, house, folk, blues, \
         funk, soul, punk, grunge, dubstep, dnb, disco, k-pop, \
         r&b, experimental, eksperymentalna, lo-fi, ambient",
@@ -173,6 +174,7 @@ LABELS_CONFIG = {
         "route": "AUDIO"
     },
 
+
     # 2. NASTRÓJ / ATMOSFERA (Jaki jest klimat otoczenia/tła?)
     "audio_mood": {
         "desc": "mood, vibe, atmosphere, klimat, \
@@ -207,23 +209,23 @@ LABELS_CONFIG = {
         cleaning, sprzątanie, cooking, gotowanie, background, tło, \
         gaming, gry, playing, granie, stream, \
         date, randka, romance, miłość, sex, seks",
-        "route": "ACTIVITY"
-    }
+        "route": "AUDIO"
+    },
 }
 #dodane
 LANGUAGE_CONFIG = {
-    "polish":   ["polski", "polska", "poland", "pl", "rodzimy", "krajowy", "polskie"],
+    "polish":   ["polski", "polska", "poland", "pl", "rodzimy", "krajowy", "polskie", "polsku"],
     "british": ["brytyjski", "brytania", "anglia", "londyn", "szkocki", "walijski","british", "uk", "england", "brit", "scotland", "wales", "london"],
     "american": ["amerykański", "ameryka", "usa", "stany", "zjednoczone","american", "america", "us", "states"],
-    "english": ["angielski", "english", "anglojęzyczny"],
-    "german":   ["niemiecki", "niemcy", "german", "deutsch", "germany"],
-    "french":   ["francuski", "francja", "french", "france"],
-    "spanish":  ["hiszpański", "hiszpania", "spanish", "latino", "latynoski", "spain"],
-    "italian":  ["włoski", "włochy", "italia", "italian", "italy"],
-    "russian":  ["rosyjski", "rosja", "ruski", "moskiewski", "russian", "russia"],
-    "korean":   ["koreański", "korea", "korean"],
-    "japanese": ["japoński", "japonia", "japan", "anime", "japanese"],
-    "swedish":  ["szwedzki", "szwecja", "swedish", "sweden"],
+    "english": ["angielski", "english", "anglojęzyczny", "angielsku"],
+    "german":   ["niemiecki", "niemcy", "german", "deutsch", "germany", "niemiecku"],
+    "french":   ["francuski", "francja", "french", "france", "francusku"],
+    "spanish":  ["hiszpański", "hiszpania", "spanish", "latino", "latynoski", "spain", "hiszpańsku"],
+    "italian":  ["włoski", "włochy", "italia", "italian", "italy", "włosku"],
+    "russian":  ["rosyjski", "rosja", "ruski", "moskiewski", "russian", "russia", "rosyjsku"],
+    "korean":   ["koreański", "korea", "korean", "koreańsku"],
+    "japanese": ["japoński", "japonia", "japan", "anime", "japanese", "japońsku"],
+    "swedish":  ["szwedzki", "szwecja", "swedish", "sweden", "szwedzku"],
     "foreign": ["zagraniczny", "obcy", "międzynarodowy", "światowy", "foreign", "international", "overseas","global"],
 }
 
@@ -237,11 +239,11 @@ GENRE_PHRASES_EXACT = {
 
 GENRE_LEMMA_CONFIG = {
     "rap": ["rap", "rapowy", "rapsy", "trap", "drill"],
-    "rock": ["rock", "rockowy", "metal", "metalowy", "grunge", "punk", "punkowy", "alt"],
+    "rock": ["rock", "rockowy", "metal", "metalowy", "grunge", "grungowy", "punk", "punkowy", "alt"],
     "pop": ["pop", "popowy", "disco", "mainstream", "radiowy", "przebój", "hit"],
     "electronic": ["elektroniczny", "elektro", "techno", "house", "trance", "dubstep", "edm", "klubowy"],
     "jazz": ["jazz", "jazzowy", "dżez", "blues", "bluesowy", "funk", "funkowy", "soul", "soulowy"],
-    "classical": ["klasyczny", "orkiestrowy", "symfoniczny", "pianino", "smyczkowy"],
+    "classical": ["klasyczny", "orkiestrowy", "symfoniczny", "classical", "ochestra", "symphonic"],
     "reggae": ["reggae", "rasta", "ska", "dub"],
     "folk": ["folk", "folkowy", "etno", "ludowy", "country"],
     "indie": ["indie", "alternatywny"]
@@ -309,6 +311,7 @@ FEATURE_DESCRIPTIONS = {
     ],
 
     'speechiness': [
+        # Speechiness > 0.66 to zazwyczaj podcasty, 0.33-0.66 to rap, < 0.33 to muzyka
         ((0.0, 0.22), "very low speechiness, purely musical track, no spoken words, fully melodic music - muzyka, melodia, śpiew, mało gadania"),
         ((0.22, 0.66), "low speechiness, mostly music with occasional spoken words or short background phrases - muzyka ze wstawkami mowy, rap, hip-hop"),
         ((0.66, 1.0), "medium to high speechiness, balanced mix of speech and music, frequent spoken segments, rap-like or talky structure - dużo gadania, mowa, wywiad, audiobook, podcast, recytacja"),
@@ -341,11 +344,12 @@ ACTIVITY_GROUPS = {
 
     'sleep_relax': {
         'triggers': [
+            # EN
             "sleeping", "falling asleep", "insomnia", "nap", "napping",
             "meditation", "meditating", "yoga", "mindfulness", "zen",
             "spa", "massage", "calm down", "anxiety relief", "stress relief",
             "lying in bed", "winding down", "evening relaxation", "chill out",
-
+            # PL
             "spanie", "sen", "zasypianie", "bezsenność", "drzemka",
             "medytacja", "joga", "uważność", "spa", "masaź",
             "spokój", "stres", "leżenie w łóżku", "wieczorny relaks",
@@ -362,11 +366,12 @@ ACTIVITY_GROUPS = {
 
     'workout_intense': {
         'triggers': [
+            # EN
             "gym", "weightlifting", "crossfit", "boxing", "kickboxing",
             "hiit", "interval training", "sprint", "running fast", "cardio",
             "beast mode", "motivation", "pump up", "hardcore training",
             "powerlifting", "bodybuilding", "marathon training",
-
+            # PL
             "siłownia", "ciężary", "boks", "interwały", "sprint",
             "bieganie", "szybki bieg", "kardio", "motywacja", "trening",
             "mocny trening", "kulturystyka", "maraton", "ćwiczenia",
@@ -382,11 +387,12 @@ ACTIVITY_GROUPS = {
 
     'commute_jogging': {
         'triggers': [
+            # EN
             "jogging", "walking", "walking the dog", "commuting", "driving",
             "road trip", "car ride", "night drive", "highway", "bus ride",
             "train ride", "traveling", "subway", "city walk", "bike riding",
             "cycling",
-
+            # PL
             "jogging", "trucht", "spacer", "spacer z psem", "dojazd", "jazda autem",
             "samochód", "podróż", "nocna jazda", "autostrada", "autobus",
             "pociąg", "metro", "miasto", "rower", "jazda na rowerze",
@@ -401,12 +407,12 @@ ACTIVITY_GROUPS = {
 
     'party_club': {
         'triggers': [
-
+            # EN
             "party", "house party", "clubbing", "dancing", "dancefloor",
             "friday night", "saturday night", "birthday", "celebration",
             "drinking", "pre-game", "getting ready", "festival", "rave",
             "disco", "summer party", "pool party",
-
+            # PL
             "impreza", "domówka", "klub", "taniec", "parkiet",
             "piątek wieczór", "sobota", "urodziny", "świętowanie",
             "picie", "bifor", "festiwal", "dyskoteka", "letnia impreza",
@@ -422,12 +428,12 @@ ACTIVITY_GROUPS = {
 
     'chores_background': {
         'triggers': [
-
+            # EN
             "cleaning", "cleaning the house", "cooking", "kitchen",
             "doing dishes", "gardening", "chores", "housework",
             "morning coffee", "breakfast", "sunday morning",
             "hanging out", "friends coming over", "dinner party", "barbecue",
-
+            # PL
             "sprzątanie", "porządki", "gotowanie", "kuchnia",
             "zmywanie", "ogród", "prace domowe", "obowiązki",
             "poranna kawa", "śniadanie", "niedziela rano",
@@ -444,12 +450,12 @@ ACTIVITY_GROUPS = {
 
     'sad_emotional': {
         'triggers': [
-
+            # EN
             "sad", "crying", "depression", "depressed", "lonely",
             "heartbreak", "breakup", "missing someone", "rainy day",
             "melancholy", "grieving", "emotional", "moody", "nostalgia",
             "bad day",
-
+            # PL
             "smutek", "płacz", "depresja", "samotność",
             "złamane serce", "rozstanie", "tęsknota", "deszczowy dzień",
             "melancholia", "żałoba", "emocje", "nostalgia",
@@ -465,11 +471,11 @@ ACTIVITY_GROUPS = {
 
     'romance': {
         'triggers': [
-
+            # EN
             "date night", "romantic dinner",
             "candlelight", "intimacy", "cuddling", "boyfriend", "girlfriend",
             "valentine", "sexy", "seduction", "late night", "bedroom",
-
+            # PL
             "randka", "romantyczna kolacja",
             "świece", "nastrojowa", "intymność", "przytulanie", "chłopak", "dziewczyna",
             "walentynki", "seks", "sypialnia", "wieczór we dwoje", "miłość"
@@ -484,11 +490,11 @@ ACTIVITY_GROUPS = {
 
     'gaming': {
         'triggers': [
-
+            # EN
             "gaming", "playing games", "esports", "streaming", "twitch",
             "league of legends", "fortnite", "fps", "rpg", "cyberpunk",
             "hacker", "futuristic",
-
+            # PL
             "granie", "gry", "esport", "stream",
             "strzelanki", "haker", "futurystyczna", "do grania", "gierki"
         ],
@@ -499,4 +505,3 @@ ACTIVITY_GROUPS = {
         ]
     }
 }
-

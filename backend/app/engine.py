@@ -1,3 +1,4 @@
+import difflib
 import os
 import random
 import torch
@@ -238,106 +239,246 @@ for genre, keywords in engine_config.GENRE_LEMMA_CONFIG.items():
 
 
 
-def classify_phrases_with_gliner(prompt, spacy_phrases, model, threshold=0.15):
-    if not spacy_phrases:
+def _match_geographical_location(doc_temp, fuzzy_cutoff):
+    """
+    Sprawdza dopasowanie do lokalizacji geograficznej (język/kraj).
+
+    Returns:
+        dict lub None: Słownik z category i route jeśli znaleziono, None w przeciwnym razie.
+    """
+    for token in doc_temp:
+        lemma = token.lemma_.lower()
+
+        found_key = None
+        if lemma in engine_config.LEMMA_TO_TAG_MAP:
+            found_key = lemma
+        elif len(lemma) > 4:
+            matches = difflib.get_close_matches(lemma, engine_config.LEMMA_TO_TAG_MAP.keys(), n=1, cutoff=fuzzy_cutoff)
+            if matches:
+                found_key = matches[0]
+                print(f"Naprawiono literówkę: '{lemma}' -> '{found_key}'")
+
+        if found_key:
+            return {
+                "category": "geographical_location",
+                "route": "TAGS"
+            }
+
+    return None
+
+
+def _match_music_genre_exact(phrase_lower):
+    """
+    Sprawdza dokładne dopasowanie do popularnych gatunków muzycznych.
+
+    Returns:
+        dict lub None: Słownik z category i route jeśli znaleziono, None w przeciwnym razie.
+    """
+    for genre_key, phrases in engine_config.GENRE_PHRASES_EXACT.items():
+        for exact_phrase in phrases:
+            if exact_phrase in phrase_lower:
+                return {
+                    "category": "music_genre",
+                    "route": "TAGS"
+                }
+    return None
+
+
+def _match_music_genre_lemma(doc_temp, fuzzy_cutoff):
+    """
+    Sprawdza dopasowanie gatunku muzycznego przez lematyzację.
+
+    Returns:
+        dict lub None: Słownik z category i route jeśli znaleziono, None w przeciwnym razie.
+    """
+    for token in doc_temp:
+        lemma = token.lemma_.lower()
+
+        # dokładne dopasowanie
+        if lemma in engine_config.LEMMA_TO_GENRE_MAP:
+            return {
+                "category": "music_genre",
+                "route": "TAGS"
+            }
+
+        # fuzzy match
+        elif len(lemma) > 4:
+            matches = difflib.get_close_matches(lemma, engine_config.LEMMA_TO_GENRE_MAP.keys(), n=1, cutoff=fuzzy_cutoff)
+
+            if matches:
+                found_key = matches[0]
+                print(f"Naprawiono literówkę gatunku: '{lemma}' -> '{found_key}'")
+                return {
+                    "category": "music_genre",
+                    "route": "TAGS"
+                }
+
+    return None
+
+
+def _match_time_period(phrase_lower, doc_temp):
+    """
+    Sprawdza dopasowanie do okresu czasu/dekady.
+
+    Returns:
+        dict lub None: Słownik z category i route jeśli znaleziono, None w przeciwnym razie.
+    """
+    # dekady
+    decade_keywords = ["lat", "rok", "80", "90", "00", "70", "60", "19", "20"]
+    has_digit = any(char.isdigit() for char in phrase_lower)
+
+    if has_digit and any(x in phrase_lower for x in decade_keywords):
+        return {
+            "category": "okres_czasu",
+            "route": "TAGS"
+        }
+
+    # 2ERY / SŁOWA CZASOWE
+    era_lemmas = [
+        "stary", "nowy", "old", "oldies", "klasyk", "classic",
+        "retro", "vintage", "new", "newschool", "oldschool", "współczesny"
+    ]
+
+    # Sprawdzamy tokeny ze spaCy
+    for token in doc_temp:
+        lemma = token.lemma_.lower()
+        text = token.text.lower()
+
+        if lemma in era_lemmas or text in era_lemmas:
+            return {
+                "category": "okres_czasu",
+                "route": "TAGS"
+            }
+
+    return None
+
+
+def _match_with_gliner(phrase_lower, gliner_predictions):
+    """
+    Dopasowuje frazę do encji wykrytych przez GLiNER.
+
+    Returns:
+        dict lub None: Słownik z category i route jeśli znaleziono, None w przeciwnym razie.
+    """
+    for entity in gliner_predictions:
+        entity_lower = entity['text'].lower().strip()
+
+        # Sprawdzenie pokrycia (overlap)
+        if phrase_lower in entity_lower or entity_lower in phrase_lower:
+            full_label = entity['label']
+            short_key = GLINER_LABEL_MAP.get(full_label)
+
+            if short_key:
+                return {
+                    "category": short_key,
+                    "route": engine_config.LABELS_CONFIG[short_key]['route']
+                }
+
+    return None
+
+
+def _classify_single_phrase(phrase, doc_temp, gliner_predictions, fuzzy_cutoff):
+    """
+    Klasyfikuje pojedynczą frazę przez serię dopasowań.
+
+    Returns:
+        dict: Słownik z phrase, category i route.
+    """
+    phrase_lower = phrase.lower().strip()
+
+    # POPULARNE GATUNKI - dokładne dopasowanie
+    match = _match_music_genre_exact(phrase_lower)
+    if match:
+        return {
+            "phrase": phrase,
+            "category": match["category"],
+            "route": match["route"]
+        }
+
+    # POPULARNE GATUNKI - lematyzacja
+    match = _match_music_genre_lemma(doc_temp, fuzzy_cutoff)
+    if match:
+        return {
+            "phrase": phrase,
+            "category": match["category"],
+            "route": match["route"]
+        }
+
+    # CZAS/DEKADA
+    match = _match_time_period(phrase_lower, doc_temp)
+    if match:
+        return {
+            "phrase": phrase,
+            "category": match["category"],
+            "route": match["route"]
+        }
+
+    # JĘZYK/KRAJ
+    match = _match_geographical_location(doc_temp, fuzzy_cutoff)
+    if match:
+        return {
+            "phrase": phrase,
+            "category": match["category"],
+            "route": match["route"]
+        }
+
+    # GLINER
+    match = _match_with_gliner(phrase_lower, gliner_predictions)
+    if match:
+        return {
+            "phrase": phrase,
+            "category": match["category"],
+            "route": match["route"]
+        }
+
+    # FALLBACK
+    return {
+        "phrase": phrase,
+        "category": "none",
+        "route": "AUDIO"
+    }
+
+
+def classify_phrases_with_gliner(prompt, spacy_phrases, model, nlp_model, threshold=0.3, fuzzy_cutoff=0.9):
+    """
+    Klasyfikuje frazy wykryte przez spaCy, dopasowując je do encji wykrytych przez model GLiNER
+    w kontekście całego promptu.
+
+    Funkcja łączy precyzyjne wycinanie fraz (spaCy) z rozumieniem kontekstu (GLiNER).
+    Opiera się na globalnych zmiennych konfiguracyjnych: GLINER_LABELS_LIST, GLINER_LABEL_MAP oraz LABELS_CONFIG.
+
+    Args:
+        prompt (str): Pełna treść zapytania użytkownika (niezbędna dla kontekstu GLiNERa).
+        spacy_phrases (List[str]): Lista fraz (noun chunks/entities) wyekstrahowanych wcześniej przez spaCy.
+        model (Any): Załadowany model GLiNER (np. obiekt klasy GLiNER).
+        nlp_model: Załadowany model spaCy do lematyzacji.
+        threshold (float, optional): Próg pewności dla predykcji GLiNERa. Domyślnie 0.3.
+        fuzzy_cutoff (float, optional): Próg dla fuzzy matching. Domyślnie 0.8.
+
+    Returns:
+        List[Dict[str, str]]: Lista słowników, gdzie każdy słownik reprezentuje sklasyfikowaną frazę:
+            {
+                "phrase": str (oryginalna fraza ze spaCy),
+                "category": str (klucz kategorii np. 'gatunek_muzyczny' lub 'cecha_audio'),
+                "route": str (typ routingu np. 'TAGS' lub 'AUDIO')
+            }
+    """
+    if not spacy_phrases or nlp_model is None:
         return []
 
-        # Uruchamiamy GLiNER na całym tekście
-        # Dzięki temu odróżni "Rock" (gatunek) od "Szybka" (audio)
+    # Uruchamiamy GLiNER na całym tekście
     gliner_predictions = model.predict_entities(prompt, GLINER_LABELS_LIST, threshold=threshold)
 
     results = []
 
-    # Iterujemy po frazach ze spaCy i szukamy dla nich etykiety w wynikach GLiNERa
     for phrase in spacy_phrases:
-        matched_category = None
-        matched_route = "AUDIO"  # Domyślny routing
-
-        # Normalizacja frazy spaCy do porównania
         phrase_lower = phrase.lower().strip()
+        doc_temp = nlp_model(phrase_lower)
 
-        # Szukamy czy ta fraza została też znaleziona przez GLiNERa
-        # Sprawdzamy czy tekst encji GLiNERa zawiera się w frazie spaCy lub odwrotnie
-        # best_score = 0
-
-        # lematyzacja
-        doc_temp = nlp_pl(phrase_lower)
-
-        # JĘZYK/KRAJ
-        for token in doc_temp:
-            lemma = token.lemma_.lower()  # Pobieramy formę podstawową
-
-            if lemma in engine_config.LEMMA_TO_TAG_MAP:
-                matched_category = "geographical_location"
-                matched_route = "TAGS"
-                break
-
-        if matched_category:
-            results.append({
-                "phrase": phrase,
-                "category": matched_category,
-                "route": matched_route,
-            })
-            continue
-
-        # POPULARNE GATUNKI
-        for genre_key, phrases in engine_config.GENRE_PHRASES_EXACT.items():
-            for exact_phrase in phrases:
-                if exact_phrase in phrase_lower:
-                    matched_category = "music_genre"
-                    matched_route = "TAGS"
-                    meta_data = {"genre": genre_key}
-                    break
-            if matched_category: break
-
-        # 2. Jeśli nie znaleziono frazy, sprawdzamy LEMATY pojedynczych słów
-        if not matched_category:
-            for token in doc_temp:
-                lemma = token.lemma_.lower()
-
-                # Sprawdzamy w mapie gatunków
-                if lemma in engine_config.LEMMA_TO_GENRE_MAP:
-                    matched_category = "music_genre"
-                    matched_route = "TAGS"
-                    break
-
-        if matched_category:
-            results.append({"phrase": phrase, "category": matched_category, "route": matched_route})
-            continue
-
-        # CZAS/DEKADA
-        if any(x in phrase_lower for x in ["lat", "rok", "80", "90", "00", "70"]) and any(
-                char.isdigit() for char in phrase_lower):
-            matched_category = "okres_czasu"
-            matched_route = "TAGS"
-            print(f"[RULE:TIME] '{phrase}' wymuszono kategorię TAGS")
-            continue
-
-        for entity in gliner_predictions:
-            entity_lower = entity['text'].lower().strip()
-
-            if phrase_lower in entity_lower or entity_lower in phrase_lower:
-                full_label = entity['label']
-                short_key = GLINER_LABEL_MAP.get(full_label)
-
-                if short_key:
-                    matched_category = short_key
-                    # Pobieramy routing z konfiguracji
-                    matched_route = engine_config.LABELS_CONFIG[short_key]['route']
-                    break  # Znaleźliśmy etykietę, idziemy do następnej frazy spaCy
-
-        if not matched_category:
-            matched_category = "cecha_audio"  # Fallback
-            matched_route = "AUDIO"
-
-        results.append({
-            "phrase": phrase,
-            "category": matched_category,
-            "route": matched_route
-        })
+        result = _classify_single_phrase(phrase, doc_temp, gliner_predictions, fuzzy_cutoff)
+        results.append(result)
 
     return results
-
 
 
 def prepare_queries_for_e5_separated(classified_data, original_prompt):
@@ -483,47 +624,80 @@ def phrases_to_features(phrases_list, search_indices, lang_code='pl'):
 #  MP-------------------------------------------------------------------------------
 
 def map_phrases_to_tags(
-    phrases: list[str],
-    #db_session: Session,
-    model=model_e5,
-    threshold: float = 0.65
+        phrases: list[str],
+        model=model_e5,
+        threshold_strict: float = 0.82,  # Pewniak (E5 mówi: to jest to samo)
+        threshold_lenient: float = 0.75  # Ratunek (E5 niepewne, ale tekst podobny)
 ) -> dict[str, float]:
-
-    if threshold is None:
-        threshold = engine_config.EXTRACTION_CONFIG["tag_similarity_threshold"]
-
+    # Zabezpieczenie przed pustą bazą/frazami
     if not phrases or TAG_VECS is None or len(TAG_VECS) == 0:
         if TAG_VECS is None:
-            print("[ENGINE]Wektory tagów nie są załadowane")
+            print("[ENGINE] OSTRZEŻENIE: Wektory tagów nie są załadowane!")
         return {}
 
-    print(f"[ENGINE]Mapowanie Hybrydowe: {phrases}")
+    print(f"\n[ENGINE] Mapowanie Hybrydowe dla fraz: {phrases}")
 
+    # 1. Obliczamy wektory dla fraz użytkownika
+    # Używamy modelu E5 załadowanego globalnie
     q_vecs = model.encode(
         [f"query: {p}" for p in phrases],
         convert_to_numpy=True,
         normalize_embeddings=True
-    )
-    sims = cosine_similarity(TAG_VECS, q_vecs)
+    ).astype("float32")
+
+    # 2. Macierz podobieństwa (Wszystkie Tagi z Bazy vs Wszystkie Frazy)
+    sims_matrix = cosine_similarity(TAG_VECS, q_vecs)
+
     found_tags = {}
 
     for i, phrase in enumerate(phrases):
         # Pobieramy kolumnę wyników dla danej frazy
-        col = sims[:, i]
+        phrase_scores = sims_matrix[:, i]
 
-        # Znajdujemy indeks najlepszego dopasowania
-        best_idx = np.argmax(col)
-        best_score = float(col[best_idx])
+        # Znajdujemy najlepszy tag
+        best_idx = np.argmax(phrase_scores)
+        best_score = float(phrase_scores[best_idx])
+        best_tag_name = TAGS_LIST[best_idx]  # Bierzemy nazwę z globalnej listy
 
-        # Bierzemy nazwę tagu z listy załadowanej z bazy
-        best_tag_name = TAGS_LIST[best_idx]
+        # --- LOGIKA HYBRYDOWA ---
+        is_match = False
+        reason = ""
 
-        if best_score >= threshold:
-            print(f"   MATCH: '{phrase}' -> '{best_tag_name}' ({best_score:.3f})")
-            # Zapisujemy wynik (jeśli tag się powtarza, bierzemy wyższy wynik)
+        # A. Czy wynik jest bardzo wysoki? (Pewniak E5)
+        # Np. "heavy metal" -> "Metal" (Score 0.85)
+        if best_score >= threshold_strict:
+            is_match = True
+            reason = "High Score"
+
+        # B. Czy wynik jest średni, ale TEKST SIĘ ZGADZA? (Koło ratunkowe)
+        # Np. "rockowa" -> "Rock" (Score 0.78 - normalnie by odpadło, ale tekst ratuje)
+        elif best_score >= threshold_lenient:
+            p_lower = phrase.lower()
+            t_lower = best_tag_name.lower()
+
+            # Warunek 1: Zawieranie się (substring)
+            if t_lower in p_lower or p_lower in t_lower:
+                is_match = True
+                reason = "Text Rescue"
+
+            # Warunek 2: Fuzzy Match (literówki, np. "metalica" -> "metal")
+            # ratio > 0.7 oznacza 70% zgodności liter
+            elif difflib.SequenceMatcher(None, p_lower, t_lower).ratio() > 0.7:
+                is_match = True
+                reason = "Fuzzy Rescue"
+
+        # --- ZAPISYWANIE WYNIKU ---
+        if is_match:
+            print(f"MATCH: '{phrase}' -> '{best_tag_name}' ({best_score:.3f}) [{reason}]")
+            # Jeśli tag już jest, bierzemy max score
             found_tags[best_tag_name] = max(found_tags.get(best_tag_name, 0), best_score)
+        else:
+            # Logujemy odrzucenia (dla debugowania)
+            if best_score > 0.6:  # Żeby nie śmiecić logami o zerowym dopasowaniu
+                print(f"SKIP:  '{phrase}' -> '{best_tag_name}' ({best_score:.3f}) [Za niski wynik]")
 
     return found_tags
+
 
 
 
@@ -531,7 +705,7 @@ def search_tags_in_db(phrases, db=None):
     return map_phrases_to_tags(phrases)
 
 
-def get_query_tag_weights(raw_tags):
+def get_query_tag_weights(raw_tags)-> dict[str, float]:
 
     s = sum(raw_tags.values())
     if s <= 0: return raw_tags
