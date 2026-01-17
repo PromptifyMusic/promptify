@@ -614,6 +614,8 @@ def export_playlist(request: schemas.PlaylistCreateRequest):
         except Exception as e:
             raise HTTPException(status_code=401, detail=f"Token wygasł i nie można go odświeżyć: {str(e)}")
 
+
+
     try:
         sp = spotipy.Spotify(auth=token_info['access_token'])
         user_id = sp.current_user()['id']
