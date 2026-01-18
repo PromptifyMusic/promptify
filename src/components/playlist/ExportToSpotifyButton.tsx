@@ -4,6 +4,7 @@ import ActionButton from '../shared/ActionButton.tsx';
 import type { PlaylistItem } from '../../types';
 import { useSpotifyAuth } from '../../hooks/useSpotifyAuth.ts';
 import { exportPlaylistToSpotify } from '../../services/api.ts';
+import { showToast } from '../../utils/toast';
 
 interface ExportToSpotifyButtonProps {
     playlistName?: string;
@@ -21,12 +22,12 @@ const ExportToSpotifyButton = memo(({
 
     const handleExportToSpotify = async () => {
         if (!isAuthenticated) {
-            alert('Musisz być zalogowany do Spotify, aby wyeksportować playlistę');
+            showToast.warning('Musisz być zalogowany do Spotify, aby wyeksportować playlistę');
             return;
         }
 
         if (playlistItems.length === 0) {
-            alert('Playlista jest pusta');
+            showToast.warning('Playlista jest pusta');
             return;
         }
 
@@ -43,6 +44,7 @@ const ExportToSpotifyButton = memo(({
 
             setPlaylistUrl(response.playlist_url);
             setExportSuccess(true);
+            showToast.success(`Playlista "${response.playlist_name}" została utworzona w Spotify!`);
 
             setTimeout(() => {
                 setExportSuccess(false);
@@ -50,7 +52,6 @@ const ExportToSpotifyButton = memo(({
             }, 5000);
         } catch (error) {
             console.error('Błąd podczas eksportowania do Spotify:', error);
-            alert(`Błąd podczas eksportu: ${error instanceof Error ? error.message : 'Nieznany błąd'}`);
         } finally {
             setExportingToSpotify(false);
         }
