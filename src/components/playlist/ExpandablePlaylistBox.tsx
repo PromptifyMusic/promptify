@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import '../../styles/ExpandablePlaylistBox.css';
 import EditableTitle from '../shared/EditableTitle';
+import { DEFAULT_PLAYLIST_NAME } from '../../context/PlaylistContext';
 
 const ANIMATION_DURATION = 500;
 
@@ -23,7 +24,7 @@ const ExpandablePlaylistBox = ({
   children,
   isExpanded = false,
   onCollapse,
-  playlistName = 'Playlista',
+  playlistName = DEFAULT_PLAYLIST_NAME,
   onPlaylistNameChange,
 }: ExpandablePlaylistBoxProps) => {
   const [isAnimationComplete, setIsAnimationComplete] = useState(false);

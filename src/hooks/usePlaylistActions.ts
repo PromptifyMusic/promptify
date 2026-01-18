@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { PlaylistItem } from '../types';
-import { usePlaylistContext } from '../context/PlaylistContext';
+import { usePlaylistContext, DEFAULT_PLAYLIST_NAME } from '../context/PlaylistContext';
 import { usePlaylistOperations } from './usePlaylistOperations';
 import { generatePlaylist, formatDuration, extractImageUrl } from '../services/api';
 import { generatePlaylistItemId } from '../utils/generateId';
@@ -107,7 +107,8 @@ export function usePlaylistActions() {
   const handleCollapse = useCallback(() => {
     setIsExpanded(false);
     setShouldClearPrompt(true);
-  }, [setIsExpanded, setShouldClearPrompt]);
+    setName(DEFAULT_PLAYLIST_NAME);
+  }, [setIsExpanded, setShouldClearPrompt, setName]);
 
   return {
     items,

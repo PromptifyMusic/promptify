@@ -5,6 +5,7 @@ import type { PlaylistItem } from '../../types';
 import { useSpotifyAuth } from '../../hooks/useSpotifyAuth.ts';
 import { exportPlaylistToSpotify } from '../../services/api.ts';
 import { showToast } from '../../utils/toast';
+import { DEFAULT_PLAYLIST_NAME } from '../../context/PlaylistContext';
 
 interface ExportToSpotifyButtonProps {
     playlistName?: string;
@@ -42,7 +43,7 @@ const ExportToSpotifyButton = memo(({
 
         try {
             const response = await exportPlaylistToSpotify({
-                name: playlistName || 'Moja Playlista',
+                name: playlistName || DEFAULT_PLAYLIST_NAME,
                 description: 'Playlista wygenerowana przez Promptify',
                 song_ids: playlistItems.map(item => item.spotifyId),  // Używamy spotifyId!
                 public: false,

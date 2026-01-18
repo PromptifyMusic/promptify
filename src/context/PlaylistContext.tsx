@@ -46,11 +46,13 @@ interface PlaylistProviderProps {
 
 const STORAGE_KEY = 'promptify_playlist_state';
 
-const initialState: PlaylistState = {
+export const DEFAULT_PLAYLIST_NAME = 'Playlista promptify';
+
+export const initialState: PlaylistState = {
   items: [],
   isExpanded: false,
   isLoading: false,
-  name: 'Playlista',
+  name: DEFAULT_PLAYLIST_NAME,
   originalPrompt: '',
   initialQuantity: 0,
   shouldClearPrompt: false,
