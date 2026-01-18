@@ -50,7 +50,6 @@ export function usePlaylistActions() {
 
         setItems(playlistItems);
         setIsExpanded(true);
-        showToast.success(`Playlista z ${tracks.length} utworami została wygenerowana!`);
       } catch (error) {
         console.error('Error during playlist creation:', error);
       } finally {
