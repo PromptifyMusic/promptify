@@ -1,4 +1,5 @@
 ﻿// API service for backend communication
+import { handleApiError } from '../utils/toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -42,7 +43,7 @@ export const generatePlaylist = async (
 
         return await response.json();
     } catch (error) {
-        console.error('Error generating playlist:', error);
+        handleApiError(error, 'Błąd podczas generowania playlisty');
         throw error;
     }
 };
@@ -78,7 +79,7 @@ export const replaceSong = async (
 
         return await response.json();
     } catch (error) {
-        console.error('Error replacing song:', error);
+        handleApiError(error, 'Błąd podczas wymiany utworu');
         throw error;
     }
 };
@@ -118,7 +119,7 @@ export const generateTempPlaylist = async (
 
         return await response.json();
     } catch (error) {
-        console.error('Error generating temp playlist:', error);
+        handleApiError(error, 'Błąd podczas generowania tymczasowej playlisty');
         throw error;
     }
 };
@@ -145,7 +146,7 @@ export const getRandomTrack = async (): Promise<TempPlaylistTrack> => {
 
         return await response.json();
     } catch (error) {
-        console.error('Error getting random track:', error);
+        handleApiError(error, 'Błąd podczas pobierania losowego utworu');
         throw error;
     }
 };
@@ -226,7 +227,7 @@ export const exportPlaylistToSpotify = async (
 
         return await response.json();
     } catch (error) {
-        console.error('Error exporting playlist to Spotify:', error);
+        handleApiError(error, 'Błąd podczas eksportu playlisty do Spotify');
         throw error;
     }
 };
