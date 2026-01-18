@@ -1,5 +1,5 @@
 import { memo, useState } from 'react';
-import { Music2, ExternalLink } from 'lucide-react';
+import { Music2, ExternalLink, Info } from 'lucide-react';
 import ActionButton from '../shared/ActionButton.tsx';
 import type { PlaylistItem } from '../../types';
 import { useSpotifyAuth } from '../../hooks/useSpotifyAuth.ts';
@@ -58,7 +58,7 @@ const ExportToSpotifyButton = memo(({
     };
 
     return (
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex flex-col items-center gap-3">
             <ActionButton
                 onClick={exportSuccess ? handleOpenSpotify : handleExportToSpotify}
                 loading={exportingToSpotify}
@@ -77,6 +77,12 @@ const ExportToSpotifyButton = memo(({
                     </>
                 )}
             </ActionButton>
+            {!isAuthenticated && (
+                <div className="flex items-center gap-2 text-white/60 text-sm">
+                    <Info size={16} className="text-white/50" />
+                    <span>Zaloguj się do Spotify, aby wyeksportować playlistę</span>
+                </div>
+            )}
         </div>
     );
 });
