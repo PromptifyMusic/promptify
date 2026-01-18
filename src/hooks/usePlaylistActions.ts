@@ -4,6 +4,7 @@ import { usePlaylistContext } from '../context/PlaylistContext';
 import { usePlaylistOperations } from './usePlaylistOperations';
 import { generatePlaylist, formatDuration, extractImageUrl } from '../services/api';
 import { generatePlaylistItemId } from '../utils/generateId';
+import { showToast } from '../utils/toast';
 
 export function usePlaylistActions() {
   const {
@@ -48,9 +49,9 @@ export function usePlaylistActions() {
 
         setItems(playlistItems);
         setIsExpanded(true);
+        showToast.success(`Playlista z ${tracks.length} utworami została wygenerowana!`);
       } catch (error) {
         console.error('Error during playlist creation:', error);
-        alert('Błąd podczas tworzenia playlisty. Sprawdź konsolę lub połączenie z backendem.');
       } finally {
         setIsLoading(false);
       }
@@ -79,6 +80,7 @@ export function usePlaylistActions() {
             duration: updatedTrack.duration,
             image: updatedTrack.image,
           });
+          showToast.success('Utwór został pomyślnie zastąpiony');
         }
       );
     },
@@ -97,6 +99,7 @@ export function usePlaylistActions() {
           id: generatePlaylistItemId(newTrack.trackId),
         };
         addItem(newItem);
+        showToast.success('Nowy utwór został dodany do playlisty');
       }
     );
   }, [items, originalPrompt, addItemOperation, addItem]);

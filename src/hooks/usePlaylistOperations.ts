@@ -34,8 +34,6 @@ export const usePlaylistOperations = () => {
             console.error('Error during regeneration:', error);
             if (onError) {
                 onError(error as Error);
-            } else {
-                alert('Błąd podczas regeneracji utworu. Sprawdź konsolę lub połączenie z backendem.');
             }
         } finally {
             setRegeneratingItems((prev) => {
@@ -71,8 +69,6 @@ export const usePlaylistOperations = () => {
             console.error('Error during adding item:', error);
             if (onError) {
                 onError(error as Error);
-            } else {
-                alert('Błąd podczas dodawania utworu. Sprawdź konsolę lub połączenie z backendem.');
             }
         } finally {
             setIsAddingItem(false);

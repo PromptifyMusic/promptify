@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { SpotifyAuthStatus, UseSpotifyAuthReturn } from '../types';
+import { showToast } from '../utils/toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -8,27 +9,45 @@ export const useSpotifyAuth = (): UseSpotifyAuthReturn => {
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    const checkAuthStatus = useCallback(async () => {
+    const checkAuthStatus = useCallback(async (showErrorToast: boolean = false) => {
         try {
             const response = await fetch(`${API_BASE_URL}/auth/status`);
+
+            if (!response.ok) {
+                setAuthStatus({ authenticated: false });
+                setErrorMessage(null);
+                setIsLoading(false);
+
+                return;
+            }
+
             const data: SpotifyAuthStatus = await response.json();
             setAuthStatus(data);
 
             if (data.error && data.message) {
                 setErrorMessage(data.message);
+
+                if (showErrorToast) {
+                    showToast.error(data.message);
+                }
             } else {
                 setErrorMessage(null);
             }
         } catch (error) {
-            console.error('Error checking auth status:', error);
+            console.warn('Cannot connect to backend:', error);
             setAuthStatus({ authenticated: false });
+            setErrorMessage(null);
+
+            if (showErrorToast) {
+                showToast.error('Nie można połączyć się z backendem. Sprawdź czy serwer jest uruchomiony.');
+            }
         } finally {
             setIsLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        checkAuthStatus();
+        checkAuthStatus(false);
     }, [checkAuthStatus]);
 
     useEffect(() => {
@@ -37,10 +56,15 @@ export const useSpotifyAuth = (): UseSpotifyAuthReturn => {
 
         if (authStatus === 'success') {
             window.history.replaceState({}, '', window.location.pathname);
-            checkAuthStatus();
+
+            checkAuthStatus(false).then(() => {
+                showToast.success('Pomyślnie połączono z kontem Spotify');
+            });
         } else if (authStatus === 'cancelled') {
             console.log('[useSpotifyAuth] Autoryzacja została anulowana przez użytkownika');
-            setErrorMessage(null); // Nie pokazuj błędu, to była świadoma decyzja użytkownika
+            setErrorMessage(null);
+            setIsLoading(false);
+            showToast.info('Autoryzacja Spotify została anulowana');
             window.history.replaceState({}, '', window.location.pathname);
         } else if (authStatus === 'error') {
             const reason = params.get('reason');
@@ -65,6 +89,8 @@ export const useSpotifyAuth = (): UseSpotifyAuthReturn => {
             }
 
             setErrorMessage(message);
+            showToast.error(message);
+            setIsLoading(false);
             window.history.replaceState({}, '', window.location.pathname);
         }
     }, [checkAuthStatus]);
@@ -80,8 +106,11 @@ export const useSpotifyAuth = (): UseSpotifyAuthReturn => {
             });
             setAuthStatus({ authenticated: false });
             setErrorMessage(null);
+            showToast.success('Pomyślnie wylogowano z konta Spotify');
         } catch (error) {
-            console.error('Error during logout:', error);
+            console.warn('Logout error (non-critical):', error);
+            setAuthStatus({ authenticated: false });
+            setErrorMessage(null);
         }
     }, []);
 
