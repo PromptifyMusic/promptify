@@ -44,6 +44,8 @@ interface PlaylistProviderProps {
   children: ReactNode;
 }
 
+const STORAGE_KEY = 'promptify_playlist_state';
+
 const initialState: PlaylistState = {
   items: [],
   isExpanded: false,
@@ -54,17 +56,65 @@ const initialState: PlaylistState = {
   shouldClearPrompt: false,
 };
 
+const loadStateFromStorage = (): Partial<PlaylistState> | null => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Error loading playlist state from localStorage:', error);
+  }
+  return null;
+};
+
+const saveStateToStorage = (state: PlaylistState) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.error('Error saving playlist state to localStorage:', error);
+  }
+};
+
+const clearStateFromStorage = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error('Error clearing playlist state from localStorage:', error);
+  }
+};
+
 export function PlaylistProvider({ children }: PlaylistProviderProps) {
-  const [items, setItems] = useState<PlaylistItem[]>(initialState.items);
-  const [isExpanded, setIsExpanded] = useState(initialState.isExpanded);
+  const getInitialState = (): PlaylistState => {
+    const stored = loadStateFromStorage();
+    return stored ? { ...initialState, ...stored } : initialState;
+  };
+
+  const initialStateValue = getInitialState();
+
+  const [items, setItems] = useState<PlaylistItem[]>(initialStateValue.items);
+  const [isExpanded, setIsExpanded] = useState(initialStateValue.isExpanded);
   const [isLoading, setIsLoading] = useState(initialState.isLoading);
-  const [name, setName] = useState(initialState.name);
-  const [originalPrompt, setOriginalPrompt] = useState(initialState.originalPrompt);
-  const [initialQuantity, setInitialQuantity] = useState(initialState.initialQuantity);
+  const [name, setName] = useState(initialStateValue.name);
+  const [originalPrompt, setOriginalPrompt] = useState(initialStateValue.originalPrompt);
+  const [initialQuantity, setInitialQuantity] = useState(initialStateValue.initialQuantity);
   const [shouldClearPrompt, setShouldClearPrompt] = useState(initialState.shouldClearPrompt);
 
   const [deletingItems, setDeletingItemsState] = useState<Set<string>>(new Set());
   const deleteTimeoutsRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    const state: PlaylistState = {
+      items,
+      isExpanded,
+      isLoading: false,
+      name,
+      originalPrompt,
+      initialQuantity,
+      shouldClearPrompt: false,
+    };
+    saveStateToStorage(state);
+  }, [items, isExpanded, name, originalPrompt, initialQuantity]);
 
   useEffect(() => {
     return () => {
@@ -121,6 +171,7 @@ export function PlaylistProvider({ children }: PlaylistProviderProps) {
     setInitialQuantity(initialState.initialQuantity);
     setShouldClearPrompt(initialState.shouldClearPrompt);
     setDeletingItemsState(new Set());
+    clearStateFromStorage();
   }, []);
 
   const markAsDeleting = useCallback((id: string) => {
