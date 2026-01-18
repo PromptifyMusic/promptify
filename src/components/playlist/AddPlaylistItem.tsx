@@ -36,4 +36,3 @@ const AddPlaylistItem = memo(({ onAdd, isAdding = false }: AddPlaylistItemProps)
 AddPlaylistItem.displayName = 'AddPlaylistItem';
 
 export default AddPlaylistItem;
-

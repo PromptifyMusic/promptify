@@ -111,4 +111,3 @@ const EditableTitle = ({
 };
 
 export default EditableTitle;
-

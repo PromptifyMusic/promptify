@@ -1,4 +1,5 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
+import { CounterMode } from '../../types';
 import Textarea from '../shared/Textarea.tsx';
 import TextareaCounter from '../shared/TextareaCounter.tsx';
 
@@ -17,7 +18,7 @@ export interface PromptTextareaProps {
   id?: string;
   ariaLabel?: string;
   maxLength?: number;
-  counterMode?: 'usedLimit' | 'remaining';
+  counterMode?: CounterMode;
   warnAt?: number;
   criticalAt?: number;
   hasError?: boolean;
@@ -39,7 +40,7 @@ const PromptTextarea: React.FC<PromptTextareaProps> = ({
   id,
   ariaLabel,
   maxLength,
-  counterMode = 'usedLimit',
+  counterMode = CounterMode.UsedLimit,
   warnAt = 0.9,
   criticalAt = 1.0,
   hasError = false,

@@ -12,6 +12,7 @@ from langdetect import detect, DetectorFactory
 from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload, load_only
 from . import models
+from sqlalchemy import text, cast, Float
 
 
 
@@ -772,28 +773,66 @@ def get_query_tag_weights(raw_tags):
     return {t: v / s for t, v in raw_tags.items()}
 
 
-def fetch_candidates_from_db(tag_scores: dict[str, float], db: Session, limit: int = None) -> pd.DataFrame:
-
+def fetch_candidates_from_db(
+        tag_scores: dict[str, float],
+        db: Session,
+        audio_constraints: list = None,  # NOWY PARAMETR: Wynik z phrases_to_features
+        limit: int = None
+) -> pd.DataFrame:
     if limit is None:
         limit = RETRIEVAL_CONFIG["n_candidates"]
 
-    if not tag_scores:
-        print("[DB FETCH] Brak tagów. Pobieram popularne utwory (Fallback).")
-        songs = db.query(models.Song).order_by(models.Song.popularity.desc()).limit(200).all()
-    else:
-        tags_list = list(tag_scores.keys())
-        print(f"[DB FETCH] Pobieram utwory dla tagów: {tags_list}")
+    songs_query = db.query(models.Song)
 
-        songs = db.query(models.Song).join(models.Song.tags) \
+    # --- SCENARIUSZ A: MAMY TAGI (Najlepsza opcja) ---
+    if tag_scores:
+        tags_list = list(tag_scores.keys())
+        print(f"[DB FETCH] Scenariusz A: Pobieram po tagach: {tags_list}")
+
+        songs_query = songs_query.join(models.Song.tags) \
             .filter(models.Tag.name.in_(tags_list)) \
-            .options(joinedload(models.Song.tags)) \
-            .limit(limit).all()
+            .options(joinedload(models.Song.tags))
+
+    #NIE MA TAGÓW
+    elif audio_constraints:
+        print(f"[DB FETCH] Brak tagów, filtr cech.")
+
+        MARGIN = 0.15
+
+        for feat_name, data in audio_constraints:
+
+            target_range = data['value']
+
+            if isinstance(target_range, (list, tuple)):
+                t_min, t_max = target_range
+            else:
+                t_min = t_max = float(target_range)
+
+            safe_min = max(0.0, t_min - MARGIN)
+            safe_max = min(1.0, t_max + MARGIN)
+
+            if hasattr(models.Song, feat_name):
+                column = getattr(models.Song, feat_name)
+                songs_query = songs_query.filter(cast(column, Float).between(safe_min, safe_max))
+                print(f"   -> SQL Filter: {feat_name} BETWEEN {safe_min:.2f} AND {safe_max:.2f}")
+
+    #Brak filtrów
+    else:
+        print("[DB FETCH]Random Sample")
+        songs_query = songs_query.order_by(text("RANDOM()"))
+
+    songs = songs_query.limit(limit).all()
+
+    #emergancy
+    if not songs and audio_constraints and not tag_scores:
+        print("[DB FETCH]Filtry zwróciły 0 wyników. Pobieram losowe.")
+        songs = db.query(models.Song).order_by(text("RANDOM()")).limit(limit).all()
 
     if not songs:
         return pd.DataFrame()
 
     data = []
-    q_pow = SCORING_CONFIG["query_pow"]
+    q_pow = SCORING_CONFIG.get("query_pow", 1.0)
 
     for s in songs:
         current_score = 0.0
@@ -803,6 +842,7 @@ def fetch_candidates_from_db(tag_scores: dict[str, float], db: Session, limit: i
             if t_name in song_tag_names:
                 current_score += (t_weight ** q_pow)
 
+
         data.append({
             "spotify_id": s.spotify_id,
             "name": s.name,
@@ -810,7 +850,7 @@ def fetch_candidates_from_db(tag_scores: dict[str, float], db: Session, limit: i
             "popularity": s.popularity or 0,
             "album_images": s.album_images,
             "duration_ms": s.duration_ms,
-            "tag_score": current_score,
+            "tag_score": current_score,  # Jeśli Scenariusz B, to będzie 0.0, ale to OK
             "energy": float(s.energy) if s.energy is not None else 0.5,
             "danceability": float(s.danceability) if s.danceability is not None else 0.5,
             "valence": float(s.valence) if s.valence is not None else 0.5,
@@ -820,10 +860,10 @@ def fetch_candidates_from_db(tag_scores: dict[str, float], db: Session, limit: i
         })
 
     df = pd.DataFrame(data)
-
     if not df.empty and df['tag_score'].max() > 0:
         df['tag_score'] /= df['tag_score'].max()
 
+    # Inicjalizacja
     if not df.empty:
         df['score'] = df['tag_score']
 
