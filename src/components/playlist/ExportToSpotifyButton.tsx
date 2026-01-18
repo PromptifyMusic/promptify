@@ -1,5 +1,5 @@
 import { memo, useState } from 'react';
-import { Music2 } from 'lucide-react';
+import { Music2, ExternalLink } from 'lucide-react';
 import ActionButton from '../shared/ActionButton.tsx';
 import type { PlaylistItem } from '../../types';
 import { useSpotifyAuth } from '../../hooks/useSpotifyAuth.ts';
@@ -16,6 +16,8 @@ const ExportToSpotifyButton = memo(({
     playlistItems,
 }: ExportToSpotifyButtonProps) => {
     const [exportingToSpotify, setExportingToSpotify] = useState(false);
+    const [exportSuccess, setExportSuccess] = useState(false);
+    const [playlistUrl, setPlaylistUrl] = useState<string | null>(null);
     const { isAuthenticated } = useSpotifyAuth();
 
     const handleExportToSpotify = async () => {
@@ -39,6 +41,8 @@ const ExportToSpotifyButton = memo(({
                 public: false,
             });
 
+            setPlaylistUrl(response.playlist_url);
+            setExportSuccess(true);
             showToast.success(`Playlista "${response.playlist_name}" została utworzona w Spotify!`);
         } catch (error) {
             console.error('Błąd podczas eksportowania do Spotify:', error);
@@ -47,17 +51,31 @@ const ExportToSpotifyButton = memo(({
         }
     };
 
+    const handleOpenSpotify = () => {
+        if (playlistUrl) {
+            window.open(playlistUrl, '_blank', 'noopener,noreferrer');
+        }
+    };
 
     return (
         <div className="mt-6 flex justify-center">
             <ActionButton
-                onClick={handleExportToSpotify}
+                onClick={exportSuccess ? handleOpenSpotify : handleExportToSpotify}
                 loading={exportingToSpotify}
                 disabled={!isAuthenticated || exportingToSpotify}
                 className="action-button--spotify"
             >
-                <Music2 size={20} className="inline-block align-middle mr-2" />
-                {exportingToSpotify ? 'Eksportowanie...' : 'Eksportuj do Spotify'}
+                {exportSuccess ? (
+                    <>
+                        <ExternalLink size={20} className="inline-block align-middle mr-2" />
+                        Otwórz w Spotify
+                    </>
+                ) : (
+                    <>
+                        <Music2 size={20} className="inline-block align-middle mr-2" />
+                        {exportingToSpotify ? 'Eksportowanie...' : 'Eksportuj do Spotify'}
+                    </>
+                )}
             </ActionButton>
         </div>
     );
