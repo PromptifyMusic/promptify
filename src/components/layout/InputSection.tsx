@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useEffect } from "react";
 import QuantityInput from "../prompt/QuantityInput.tsx";
 import PromptTextarea from "../prompt/PromptTextarea.tsx";
 import ActionButton from "../shared/ActionButton.tsx";
@@ -8,14 +8,23 @@ interface InputSectionProps {
     isPlaylistExpanded: boolean;
     onCreatePlaylist: (prompt: string, quantity: number) => void;
     isLoading?: boolean;
+    shouldClearPrompt?: boolean;
+    onPromptCleared?: () => void;
 }
 
 const DEFAULT_QUANTITY = 15;
 
-function InputSection({ isPlaylistExpanded, onCreatePlaylist, isLoading = false }: InputSectionProps) {
+function InputSection({ isPlaylistExpanded, onCreatePlaylist, isLoading = false, shouldClearPrompt, onPromptCleared }: InputSectionProps) {
     const [prompt, setPrompt] = useState<string>("");
     const [quantity, setQuantity] = useState<number>(DEFAULT_QUANTITY);
     const [hasError, setHasError] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (shouldClearPrompt) {
+            setPrompt("");
+            onPromptCleared?.();
+        }
+    }, [shouldClearPrompt, onPromptCleared]);
 
     const handleCreateClick = () => {
         const trimmedPrompt = prompt.trim();

@@ -8,6 +8,7 @@ interface PlaylistState {
   name: string;
   originalPrompt: string;
   initialQuantity: number;
+  shouldClearPrompt: boolean;
 }
 
 interface PlaylistContextType {
@@ -17,6 +18,7 @@ interface PlaylistContextType {
   name: string;
   originalPrompt: string;
   initialQuantity: number;
+  shouldClearPrompt: boolean;
 
   setItems: (items: PlaylistItem[]) => void;
   addItem: (item: PlaylistItem) => void;
@@ -28,6 +30,7 @@ interface PlaylistContextType {
   setName: (name: string) => void;
   setOriginalPrompt: (prompt: string) => void;
   setInitialQuantity: (quantity: number) => void;
+  setShouldClearPrompt: (shouldClear: boolean) => void;
   reset: () => void;
 
   deletingItems: ReadonlySet<string>;
@@ -48,6 +51,7 @@ const initialState: PlaylistState = {
   name: 'Playlista',
   originalPrompt: '',
   initialQuantity: 0,
+  shouldClearPrompt: false,
 };
 
 export function PlaylistProvider({ children }: PlaylistProviderProps) {
@@ -57,6 +61,7 @@ export function PlaylistProvider({ children }: PlaylistProviderProps) {
   const [name, setName] = useState(initialState.name);
   const [originalPrompt, setOriginalPrompt] = useState(initialState.originalPrompt);
   const [initialQuantity, setInitialQuantity] = useState(initialState.initialQuantity);
+  const [shouldClearPrompt, setShouldClearPrompt] = useState(initialState.shouldClearPrompt);
 
   const [deletingItems, setDeletingItemsState] = useState<Set<string>>(new Set());
   const deleteTimeoutsRef = useRef<Map<string, number>>(new Map());
@@ -114,6 +119,7 @@ export function PlaylistProvider({ children }: PlaylistProviderProps) {
     setName(initialState.name);
     setOriginalPrompt(initialState.originalPrompt);
     setInitialQuantity(initialState.initialQuantity);
+    setShouldClearPrompt(initialState.shouldClearPrompt);
     setDeletingItemsState(new Set());
   }, []);
 
@@ -136,6 +142,7 @@ export function PlaylistProvider({ children }: PlaylistProviderProps) {
     name,
     originalPrompt,
     initialQuantity,
+    shouldClearPrompt,
 
     setItems,
     addItem,
@@ -147,6 +154,7 @@ export function PlaylistProvider({ children }: PlaylistProviderProps) {
     setName,
     setOriginalPrompt,
     setInitialQuantity,
+    setShouldClearPrompt,
     reset,
 
     deletingItems,

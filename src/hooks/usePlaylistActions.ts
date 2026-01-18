@@ -24,6 +24,7 @@ export function usePlaylistActions() {
     setName,
     setOriginalPrompt,
     setInitialQuantity,
+    setShouldClearPrompt,
   } = usePlaylistContext();
 
   const { regeneratingItems, isAddingItem, regenerateItem, addItem: addItemOperation } = usePlaylistOperations();
@@ -104,6 +105,11 @@ export function usePlaylistActions() {
     );
   }, [items, originalPrompt, addItemOperation, addItem]);
 
+  const handleCollapse = useCallback(() => {
+    setIsExpanded(false);
+    setShouldClearPrompt(true);
+  }, [setIsExpanded, setShouldClearPrompt]);
+
   return {
     items,
     isExpanded,
@@ -119,6 +125,7 @@ export function usePlaylistActions() {
     deleteItem,
     handleRegenerateItem,
     handleAddItem,
+    handleCollapse,
     setName,
     setIsExpanded,
   };
