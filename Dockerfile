@@ -19,8 +19,7 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # --- KLUCZOWE ---
-# Pobieramy modele spaCy od razu w obrazie.
-# Dzięki temu aplikacja nie musi ich pobierać przy starcie.
+
 RUN python -m spacy download pl_core_news_lg
 RUN python -m spacy download en_core_web_md
 

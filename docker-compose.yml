@@ -24,6 +24,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
     container_name: music_backend_ml
     ports:
       - "8000:8000"
@@ -43,5 +50,6 @@ services:
       sh -c "echo 'Czekam na init.sql...' && sleep 30 && 
              python update_tag_vectors.py && 
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
 volumes:
   postgres_data:
