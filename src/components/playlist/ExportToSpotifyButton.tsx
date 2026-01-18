@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Music2, ExternalLink, Info } from 'lucide-react';
 import ActionButton from '../shared/ActionButton.tsx';
 import type { PlaylistItem } from '../../types';
@@ -19,6 +19,13 @@ const ExportToSpotifyButton = memo(({
     const [exportSuccess, setExportSuccess] = useState(false);
     const [playlistUrl, setPlaylistUrl] = useState<string | null>(null);
     const { isAuthenticated, isLoading } = useSpotifyAuth();
+
+    useEffect(() => {
+        if (exportSuccess) {
+            setExportSuccess(false);
+            setPlaylistUrl(null);
+        }
+    }, [playlistItems, playlistName]);
 
     const handleExportToSpotify = async () => {
         if (!isAuthenticated) {
@@ -45,7 +52,7 @@ const ExportToSpotifyButton = memo(({
             setExportSuccess(true);
             showToast.success(`Playlista "${response.playlist_name}" została utworzona w Spotify!`);
         } catch (error) {
-            console.error('Błąd podczas eksportowania do Spotify:', error);
+            showToast.error('Nie udało się wyeksportować playlisty do Spotify. Spróbuj ponownie.');
         } finally {
             setExportingToSpotify(false);
         }
