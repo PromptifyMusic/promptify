@@ -1,7 +1,7 @@
 ﻿import { ChevronUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import '../../styles/ExpandablePlaylistBox.css';
-import EditableTitle from '../shared/EditableTitle.tsx';
+import EditableTitle from '../shared/EditableTitle';
 
 const ANIMATION_DURATION = 500;
 
