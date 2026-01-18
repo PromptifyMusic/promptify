@@ -18,7 +18,7 @@ const ExportToSpotifyButton = memo(({
     const [exportingToSpotify, setExportingToSpotify] = useState(false);
     const [exportSuccess, setExportSuccess] = useState(false);
     const [playlistUrl, setPlaylistUrl] = useState<string | null>(null);
-    const { isAuthenticated } = useSpotifyAuth();
+    const { isAuthenticated, isLoading } = useSpotifyAuth();
 
     const handleExportToSpotify = async () => {
         if (!isAuthenticated) {
@@ -77,7 +77,7 @@ const ExportToSpotifyButton = memo(({
                     </>
                 )}
             </ActionButton>
-            {!isAuthenticated && (
+            {!isLoading && !isAuthenticated && (
                 <div className="flex items-center gap-2 text-white/60 text-sm">
                     <Info size={16} className="text-white/50" />
                     <span>Zaloguj się do Spotify, aby wyeksportować playlistę</span>
