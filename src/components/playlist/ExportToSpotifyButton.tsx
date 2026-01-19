@@ -7,6 +7,15 @@ import { exportPlaylistToSpotify } from '../../services/api.ts';
 import { showToast } from '../../utils/toast';
 import { DEFAULT_PLAYLIST_NAME } from '../../context/PlaylistContext';
 
+const SPOTIFY_DESCRIPTION_MAX_LENGTH = 300;
+
+const truncateDescription = (description: string, maxLength: number = SPOTIFY_DESCRIPTION_MAX_LENGTH): string => {
+    if (description.length <= maxLength) {
+        return description;
+    }
+    return description.substring(0, maxLength - 3) + '...';
+};
+
 interface ExportToSpotifyButtonProps {
     playlistName?: string;
     playlistItems: PlaylistItem[];
@@ -44,9 +53,12 @@ const ExportToSpotifyButton = memo(({
         setExportingToSpotify(true);
 
         try {
+            const defaultDescription = 'Playlista wygenerowana przez Promptify';
+            const description = truncateDescription(originalPrompt || defaultDescription);
+
             const response = await exportPlaylistToSpotify({
                 name: playlistName || DEFAULT_PLAYLIST_NAME,
-                description: originalPrompt || 'Playlista wygenerowana przez Promptify',
+                description: description,
                 song_ids: playlistItems.map(item => item.spotifyId),
                 public: false,
             });
