@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { PlaylistItem } from '../types';
-import { usePlaylistContext } from '../context/PlaylistContext';
+import { usePlaylistContext, DEFAULT_PLAYLIST_NAME } from '../context/PlaylistContext';
 import { usePlaylistOperations } from './usePlaylistOperations';
 import { generatePlaylist, formatDuration, extractImageUrl } from '../services/api';
 import { generatePlaylistItemId } from '../utils/generateId';
@@ -24,6 +24,7 @@ export function usePlaylistActions() {
     setName,
     setOriginalPrompt,
     setInitialQuantity,
+    setShouldClearPrompt,
   } = usePlaylistContext();
 
   const { regeneratingItems, isAddingItem, regenerateItem, addItem: addItemOperation } = usePlaylistOperations();
@@ -49,7 +50,6 @@ export function usePlaylistActions() {
 
         setItems(playlistItems);
         setIsExpanded(true);
-        showToast.success(`Playlista z ${tracks.length} utworami została wygenerowana!`);
       } catch (error) {
         console.error('Error during playlist creation:', error);
       } finally {
@@ -104,6 +104,12 @@ export function usePlaylistActions() {
     );
   }, [items, originalPrompt, addItemOperation, addItem]);
 
+  const handleCollapse = useCallback(() => {
+    setIsExpanded(false);
+    setShouldClearPrompt(true);
+    setName(DEFAULT_PLAYLIST_NAME);
+  }, [setIsExpanded, setShouldClearPrompt, setName]);
+
   return {
     items,
     isExpanded,
@@ -119,6 +125,7 @@ export function usePlaylistActions() {
     deleteItem,
     handleRegenerateItem,
     handleAddItem,
+    handleCollapse,
     setName,
     setIsExpanded,
   };

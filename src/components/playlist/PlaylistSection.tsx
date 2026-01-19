@@ -30,9 +30,9 @@ interface PlaylistSectionProps {
     playlistItems: PlaylistItem[];
     regeneratingItems: ReadonlySet<string>;
     deletingItems: ReadonlySet<string>;
-    initialQuantity: number;
     isAddingItem: boolean;
     playlistName?: string;
+    originalPrompt?: string;
     onCollapse: () => void;
     onReorderItems: (items: PlaylistItem[]) => void;
     onDeleteItem: (id: string) => void;
@@ -46,9 +46,9 @@ const PlaylistSection = memo(({
     playlistItems,
     regeneratingItems,
     deletingItems,
-    initialQuantity,
     isAddingItem,
     playlistName,
+    originalPrompt,
     onCollapse,
     onReorderItems,
     onDeleteItem,
@@ -118,12 +118,10 @@ const PlaylistSection = memo(({
                                     isDeleting={deletingItems.has(item.id)}
                                 />
                             ))}
-                            {playlistItems.length < initialQuantity && (
-                                <AddPlaylistItem
-                                    onAdd={onAddItem}
-                                    isAdding={isAddingItem}
-                                />
-                            )}
+                            <AddPlaylistItem
+                                onAdd={onAddItem}
+                                isAdding={isAddingItem}
+                            />
                         </div>
                     </SortableContext>
                 </ExpandablePlaylistBox>
@@ -133,6 +131,7 @@ const PlaylistSection = memo(({
                 <ExportToSpotifyButton
                     playlistName={playlistName}
                     playlistItems={playlistItems}
+                    originalPrompt={originalPrompt}
                 />
             )}
         </div>

@@ -7,15 +7,15 @@ export function PlaylistSectionContainer() {
     items,
     isExpanded,
     name,
-    initialQuantity,
+    originalPrompt,
     regeneratingItems,
     isAddingItem,
     reorderItems,
     deleteItem,
     handleRegenerateItem,
     handleAddItem,
+    handleCollapse,
     setName,
-    setIsExpanded,
   } = usePlaylistActions();
   const { deletingItems } = usePlaylistContext();
 
@@ -25,10 +25,10 @@ export function PlaylistSectionContainer() {
       playlistItems={items}
       regeneratingItems={regeneratingItems}
       deletingItems={deletingItems}
-      initialQuantity={initialQuantity}
       isAddingItem={isAddingItem}
       playlistName={name}
-      onCollapse={() => setIsExpanded(false)}
+      originalPrompt={originalPrompt}
+      onCollapse={handleCollapse}
       onReorderItems={reorderItems}
       onDeleteItem={deleteItem}
       onRegenerateItem={handleRegenerateItem}

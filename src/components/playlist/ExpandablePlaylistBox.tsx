@@ -1,7 +1,8 @@
 ﻿import { ChevronUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import '../../styles/ExpandablePlaylistBox.css';
-import EditableTitle from '../shared/EditableTitle.tsx';
+import EditableTitle from '../shared/EditableTitle';
+import { DEFAULT_PLAYLIST_NAME } from '../../context/PlaylistContext';
 
 const ANIMATION_DURATION = 500;
 
@@ -23,7 +24,7 @@ const ExpandablePlaylistBox = ({
   children,
   isExpanded = false,
   onCollapse,
-  playlistName = 'Playlista',
+  playlistName = DEFAULT_PLAYLIST_NAME,
   onPlaylistNameChange,
 }: ExpandablePlaylistBoxProps) => {
   const [isAnimationComplete, setIsAnimationComplete] = useState(false);
@@ -82,9 +83,10 @@ const ExpandablePlaylistBox = ({
             />
             <button
               onClick={handleCollapse}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors duration-200"
+              className="flex items-center gap-2 px-4 py-2 hover:bg-white/10 rounded-full transition-colors duration-200"
               aria-label="Zwiń playlistę"
             >
+              <span className="text-white text-sm font-medium">Powrót</span>
               <ChevronUp className="w-5 h-5 text-white" />
             </button>
           </div>

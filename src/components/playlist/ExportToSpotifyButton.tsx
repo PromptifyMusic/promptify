@@ -1,24 +1,52 @@
-import { memo, useState } from 'react';
-import { Music2, ExternalLink, CheckCircle } from 'lucide-react';
+import { memo, useState, useEffect } from 'react';
+import { Music2, ExternalLink, Info } from 'lucide-react';
 import ActionButton from '../shared/ActionButton.tsx';
 import type { PlaylistItem } from '../../types';
 import { useSpotifyAuth } from '../../hooks/useSpotifyAuth.ts';
 import { exportPlaylistToSpotify } from '../../services/api.ts';
 import { showToast } from '../../utils/toast';
+import { DEFAULT_PLAYLIST_NAME } from '../../context/PlaylistContext';
+
+const SPOTIFY_NAME_MAX_LENGTH = 100;
+const SPOTIFY_DESCRIPTION_MAX_LENGTH = 300;
+
+const truncateText = (text: string, maxLength: number): string => {
+    if (text.length <= maxLength) {
+        return text;
+    }
+    return text.substring(0, maxLength - 3) + '...';
+};
+
+const truncateName = (name: string): string => {
+    return truncateText(name, SPOTIFY_NAME_MAX_LENGTH);
+};
+
+const truncateDescription = (description: string): string => {
+    return truncateText(description, SPOTIFY_DESCRIPTION_MAX_LENGTH);
+};
 
 interface ExportToSpotifyButtonProps {
     playlistName?: string;
     playlistItems: PlaylistItem[];
+    originalPrompt?: string;
 }
 
 const ExportToSpotifyButton = memo(({
     playlistName,
     playlistItems,
+    originalPrompt,
 }: ExportToSpotifyButtonProps) => {
     const [exportingToSpotify, setExportingToSpotify] = useState(false);
     const [exportSuccess, setExportSuccess] = useState(false);
     const [playlistUrl, setPlaylistUrl] = useState<string | null>(null);
-    const { isAuthenticated } = useSpotifyAuth();
+    const { isAuthenticated, isLoading } = useSpotifyAuth();
+
+    useEffect(() => {
+        if (exportSuccess) {
+            setExportSuccess(false);
+            setPlaylistUrl(null);
+        }
+    }, [playlistItems, playlistName]);
 
     const handleExportToSpotify = async () => {
         if (!isAuthenticated) {
@@ -32,62 +60,61 @@ const ExportToSpotifyButton = memo(({
         }
 
         setExportingToSpotify(true);
-        setExportSuccess(false);
 
         try {
+            const defaultDescription = 'Playlista wygenerowana przez Promptify';
+            const name = truncateName(playlistName || DEFAULT_PLAYLIST_NAME);
+            const description = truncateDescription(originalPrompt || defaultDescription);
+
             const response = await exportPlaylistToSpotify({
-                name: playlistName || 'Moja Playlista',
-                description: 'Playlista wygenerowana przez Promptify',
-                song_ids: playlistItems.map(item => item.spotifyId),  // Używamy spotifyId!
+                name: name,
+                description: description,
+                song_ids: playlistItems.map(item => item.spotifyId),
                 public: false,
             });
 
             setPlaylistUrl(response.playlist_url);
             setExportSuccess(true);
             showToast.success(`Playlista "${response.playlist_name}" została utworzona w Spotify!`);
-
-            setTimeout(() => {
-                setExportSuccess(false);
-                setPlaylistUrl(null);
-            }, 5000);
         } catch (error) {
-            console.error('Błąd podczas eksportowania do Spotify:', error);
+            showToast.error('Nie udało się wyeksportować playlisty do Spotify. Spróbuj ponownie.');
         } finally {
             setExportingToSpotify(false);
         }
     };
 
-    if (exportSuccess && playlistUrl) {
-        return (
-            <div className="mt-6 flex flex-col items-center gap-3">
-                <div className="flex items-center gap-2 text-green-400">
-                    <CheckCircle size={24} />
-                    <span className="text-lg font-medium">Playlista utworzona!</span>
-                </div>
-                <a
-                    href={playlistUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                >
-                    <ExternalLink size={20} />
-                    Otwórz w Spotify
-                </a>
-            </div>
-        );
-    }
+    const handleOpenSpotify = () => {
+        if (playlistUrl) {
+            window.open(playlistUrl, '_blank', 'noopener,noreferrer');
+        }
+    };
 
     return (
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex flex-col items-center gap-3">
             <ActionButton
-                onClick={handleExportToSpotify}
+                onClick={exportSuccess ? handleOpenSpotify : handleExportToSpotify}
                 loading={exportingToSpotify}
                 disabled={!isAuthenticated || exportingToSpotify}
                 className="action-button--spotify"
             >
-                <Music2 size={20} className="inline-block align-middle mr-2" />
-                {exportingToSpotify ? 'Eksportowanie...' : 'Eksportuj do Spotify'}
+                {exportSuccess ? (
+                    <>
+                        <ExternalLink size={20} className="inline-block align-middle mr-2" />
+                        Otwórz w Spotify
+                    </>
+                ) : (
+                    <>
+                        <Music2 size={20} className="inline-block align-middle mr-2" />
+                        {exportingToSpotify ? 'Eksportowanie...' : 'Eksportuj do Spotify'}
+                    </>
+                )}
             </ActionButton>
+            {!isLoading && !isAuthenticated && (
+                <div className="flex items-center gap-2 text-white/60 text-sm">
+                    <Info size={16} className="text-white/50" />
+                    <span>Zaloguj się do Spotify, aby wyeksportować playlistę</span>
+                </div>
+            )}
         </div>
     );
 });
