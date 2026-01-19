@@ -42,8 +42,8 @@ export interface UseSpotifyAuthReturn {
   user?: SpotifyUser;
   isLoading: boolean;
   errorMessage: string | null;
-  login: () => void;
+  login: () => Promise<void>;
   logout: () => Promise<void>;
-  refreshAuthStatus: () => Promise<void>;
+  refreshAuthStatus: (showErrorToast?: boolean) => Promise<void>;
 }
 
