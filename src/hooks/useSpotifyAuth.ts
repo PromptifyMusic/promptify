@@ -95,8 +95,20 @@ export const useSpotifyAuth = (): UseSpotifyAuthReturn => {
         }
     }, [checkAuthStatus]);
 
-    const login = useCallback(() => {
-        window.location.href = `${API_BASE_URL}/login`;
+    const login = useCallback(async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/status`);
+
+            if (!response.ok) {
+                showToast.error('Nie można połączyć się serwerem');
+                return;
+            }
+
+            window.location.href = `${API_BASE_URL}/login`;
+        } catch (error) {
+            console.warn('Cannot connect to backend:', error);
+            showToast.error('Nie można połączyć się z backendem. Sprawdź czy serwer jest uruchomiony.');
+        }
     }, []);
 
     const logout = useCallback(async () => {
