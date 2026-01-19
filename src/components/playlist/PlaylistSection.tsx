@@ -33,6 +33,7 @@ interface PlaylistSectionProps {
     initialQuantity: number;
     isAddingItem: boolean;
     playlistName?: string;
+    originalPrompt?: string;
     onCollapse: () => void;
     onReorderItems: (items: PlaylistItem[]) => void;
     onDeleteItem: (id: string) => void;
@@ -49,6 +50,7 @@ const PlaylistSection = memo(({
     initialQuantity,
     isAddingItem,
     playlistName,
+    originalPrompt,
     onCollapse,
     onReorderItems,
     onDeleteItem,
@@ -133,6 +135,7 @@ const PlaylistSection = memo(({
                 <ExportToSpotifyButton
                     playlistName={playlistName}
                     playlistItems={playlistItems}
+                    originalPrompt={originalPrompt}
                 />
             )}
         </div>

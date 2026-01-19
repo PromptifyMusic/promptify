@@ -10,11 +10,13 @@ import { DEFAULT_PLAYLIST_NAME } from '../../context/PlaylistContext';
 interface ExportToSpotifyButtonProps {
     playlistName?: string;
     playlistItems: PlaylistItem[];
+    originalPrompt?: string;
 }
 
 const ExportToSpotifyButton = memo(({
     playlistName,
     playlistItems,
+    originalPrompt,
 }: ExportToSpotifyButtonProps) => {
     const [exportingToSpotify, setExportingToSpotify] = useState(false);
     const [exportSuccess, setExportSuccess] = useState(false);
@@ -44,8 +46,8 @@ const ExportToSpotifyButton = memo(({
         try {
             const response = await exportPlaylistToSpotify({
                 name: playlistName || DEFAULT_PLAYLIST_NAME,
-                description: 'Playlista wygenerowana przez Promptify',
-                song_ids: playlistItems.map(item => item.spotifyId),  // Używamy spotifyId!
+                description: originalPrompt || 'Playlista wygenerowana przez Promptify',
+                song_ids: playlistItems.map(item => item.spotifyId),
                 public: false,
             });
 

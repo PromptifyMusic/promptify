@@ -7,6 +7,7 @@ export function PlaylistSectionContainer() {
     items,
     isExpanded,
     name,
+    originalPrompt,
     initialQuantity,
     regeneratingItems,
     isAddingItem,
@@ -28,6 +29,7 @@ export function PlaylistSectionContainer() {
       initialQuantity={initialQuantity}
       isAddingItem={isAddingItem}
       playlistName={name}
+      originalPrompt={originalPrompt}
       onCollapse={handleCollapse}
       onReorderItems={reorderItems}
       onDeleteItem={deleteItem}
