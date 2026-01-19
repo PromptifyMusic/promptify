@@ -116,7 +116,7 @@ export const handleApiError = (error: unknown, contextMessage: string) => {
   console.error(`[API Error] ${contextMessage}:`, error);
 
   if (isNetworkError(error)) {
-    showToast.error('Nie można połączyć się z serwerem. Sprawdź czy backend jest uruchomiony.');
+    showToast.error('Nie można połączyć się z serwerem.');
   } else {
     showToast.error(contextMessage);
   }
