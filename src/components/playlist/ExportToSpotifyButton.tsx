@@ -7,13 +7,22 @@ import { exportPlaylistToSpotify } from '../../services/api.ts';
 import { showToast } from '../../utils/toast';
 import { DEFAULT_PLAYLIST_NAME } from '../../context/PlaylistContext';
 
+const SPOTIFY_NAME_MAX_LENGTH = 100;
 const SPOTIFY_DESCRIPTION_MAX_LENGTH = 300;
 
-const truncateDescription = (description: string, maxLength: number = SPOTIFY_DESCRIPTION_MAX_LENGTH): string => {
-    if (description.length <= maxLength) {
-        return description;
+const truncateText = (text: string, maxLength: number): string => {
+    if (text.length <= maxLength) {
+        return text;
     }
-    return description.substring(0, maxLength - 3) + '...';
+    return text.substring(0, maxLength - 3) + '...';
+};
+
+const truncateName = (name: string): string => {
+    return truncateText(name, SPOTIFY_NAME_MAX_LENGTH);
+};
+
+const truncateDescription = (description: string): string => {
+    return truncateText(description, SPOTIFY_DESCRIPTION_MAX_LENGTH);
 };
 
 interface ExportToSpotifyButtonProps {
@@ -54,10 +63,11 @@ const ExportToSpotifyButton = memo(({
 
         try {
             const defaultDescription = 'Playlista wygenerowana przez Promptify';
+            const name = truncateName(playlistName || DEFAULT_PLAYLIST_NAME);
             const description = truncateDescription(originalPrompt || defaultDescription);
 
             const response = await exportPlaylistToSpotify({
-                name: playlistName || DEFAULT_PLAYLIST_NAME,
+                name: name,
                 description: description,
                 song_ids: playlistItems.map(item => item.spotifyId),
                 public: false,
